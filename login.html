@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBF Resmi Yorumlar - Giriş</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('background.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: rgba(255, 248, 220, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(139, 69, 19, 0.4);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            border: 2px solid rgba(222, 184, 135, 0.5);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #8B4513;
+        }
+
+        .login-header h1 {
+            color: #8B4513;
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #654321;
+            font-weight: 500;
+            font-size: 1.1em;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #DEB887;
+            border-radius: 8px;
+            font-size: 1em;
+            color: #654321;
+            background: rgba(255, 255, 255, 0.95);
+            transition: all 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #8B4513;
+            box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+        }
+
+        .password-group {
+            display: none;
+        }
+
+        .password-group.show {
+            display: block;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+        }
+
+        .login-btn:hover {
+            background: linear-gradient(135deg, #D2691E 0%, #A0522D 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+        }
+
+        .error-message {
+            color: #d32f2f;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>TBF Resmi Yorumlar</h1>
+            <p style="color: #654321;">Giriş Yapın</p>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="userSelect">Kullanıcı Seçin:</label>
+                <select id="userSelect" name="user" required>
+                    <option value="">-- Seçin --</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+
+            <div class="form-group password-group" id="passwordGroup">
+                <label for="password">Şifre:</label>
+                <input type="password" id="password" name="password" placeholder="Admin şifresini girin">
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <button type="submit" class="login-btn">Giriş Yap</button>
+        </form>
+    </div>
+
+    <script>
+        // İsimleri yükle
+        async function loadNames() {
+            try {
+                const response = await fetch('isimler.json');
+                const names = await response.json();
+                
+                const select = document.getElementById('userSelect');
+                
+                // Admin'den sonra isimleri ekle
+                names.forEach(name => {
+                    if (name && name.trim()) {
+                        const option = document.createElement('option');
+                        option.value = name.trim();
+                        option.textContent = name.trim();
+                        select.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('İsimler yüklenirken hata:', error);
+                // Fallback: isimler.txt'den yükle
+                try {
+                    const response = await fetch('isimler.txt');
+                    const text = await response.text();
+                    const names = text.split('\n').filter(name => name.trim() && name.trim() !== '');
+                    
+                    const select = document.getElementById('userSelect');
+                    names.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name.trim();
+                        option.textContent = name.trim();
+                        select.appendChild(option);
+                    });
+                } catch (e) {
+                    console.error('İsimler yüklenemedi:', e);
+                }
+            }
+        }
+
+        // Kullanıcı seçimi değiştiğinde
+        document.getElementById('userSelect').addEventListener('change', function() {
+            const passwordGroup = document.getElementById('passwordGroup');
+            const passwordInput = document.getElementById('password');
+            
+            if (this.value === 'admin') {
+                passwordGroup.classList.add('show');
+                passwordInput.required = true;
+            } else {
+                passwordGroup.classList.remove('show');
+                passwordInput.required = false;
+                passwordInput.value = '';
+            }
+            
+            // Hata mesajını temizle
+            document.getElementById('errorMessage').classList.remove('show');
+        });
+
+        // Form gönderildiğinde
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const selectedUser = document.getElementById('userSelect').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            
+            if (!selectedUser) {
+                errorMessage.textContent = 'Lütfen bir kullanıcı seçin!';
+                errorMessage.classList.add('show');
+                return;
+            }
+            
+            // Admin kontrolü
+            if (selectedUser === 'admin') {
+                if (!password) {
+                    errorMessage.textContent = 'Lütfen şifre girin!';
+                    errorMessage.classList.add('show');
+                    return;
+                }
+                
+                // Admin şifresi kontrolü (basit - production'da daha güvenli olmalı)
+                if (password !== 'admin123') {
+                    errorMessage.textContent = 'Şifre yanlış!';
+                    errorMessage.classList.add('show');
+                    return;
+                }
+                
+                // Admin paneline yönlendir
+                localStorage.setItem('currentUser', 'admin');
+                localStorage.setItem('userType', 'admin');
+                window.location.href = 'admin.html';
+                return;
+            }
+            
+            // Normal kullanıcı - direkt uygulamaya yönlendir
+            localStorage.setItem('currentUser', selectedUser);
+            localStorage.setItem('userType', 'user');
+            window.location.href = 'index.html';
+        });
+
+        // Sayfa yüklendiğinde isimleri yükle
+        loadNames();
+    </script>
+</body>
+</html>

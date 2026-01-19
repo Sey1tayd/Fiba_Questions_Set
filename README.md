@@ -2,32 +2,53 @@
 
 424 adet TBF Resmi Yorumlar/FIBA basketbol kuralları sorusunu interaktif şekilde çözmek için hazırlanmış web uygulaması.
 
-## 📁 Dosyalar
+## 📁 Proje Yapısı
 
-- **index.html** - Ana web uygulaması sayfası
-- **sorular.json** - Soruların JSON formatında verileri
-- **background.jpeg** - Arka plan görseli
-- **csv_to_json.py** - CSV'den JSON'a dönüştürme scripti
-- **fiba_orneklerden_soru_bankasi_v4_azsikli.csv** - Orijinal CSV dosyası
+```
+TBF_KONYA/
+├── index.html          # Ana uygulama sayfası
+├── login.html          # Giriş sayfası
+├── admin.html          # Admin paneli
+├── server.js           # Node.js/Express server
+├── package.json        # Node.js bağımlılıkları
+├── railway.json        # Railway deployment konfigürasyonu
+├── csv_to_json_new.py  # CSV'den JSON'a dönüştürme scripti
+├── static/             # Statik dosyalar
+│   ├── background.jpeg
+│   ├── sorular.json
+│   ├── isimler.json
+│   └── isimler.txt
+└── tbf_konya/          # Django proje dosyaları (gelecek kullanım için)
+```
 
-## 🚀 Kullanım
+## 🚀 Kurulum ve Kullanım
+
+### Gereksinimler
+
+- Node.js (v14 veya üzeri)
+- npm veya yarn
 
 ### Yerel Olarak Çalıştırma
 
 **Node.js ile (Önerilen):**
 ```bash
+# Bağımlılıkları yükle
 npm install
+
+# Sunucuyu başlat
 npm start
 ```
-Sonra tarayıcıda: `http://localhost:3000`
+Sunucu `http://localhost:3000` adresinde çalışacaktır.
 
-**Python ile:**
+**Not:** Python scriptleri için (CSV dönüştürme):
 ```bash
-python -m http.server 8000
-```
-Sonra tarayıcıda: `http://localhost:8000`
+# Virtual environment oluştur (opsiyonel)
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-**VS Code Live Server eklentisi** kullanarak da açabilirsiniz.
+# Gerekli paketleri yükle
+pip install -r requirements.txt
+```
 
 ## ✨ Özellikler
 
@@ -70,24 +91,38 @@ Eğer CSV dosyasını güncellediyseniz, JSON dosyasını yeniden oluşturun:
 python csv_to_json_new.py
 ```
 
+Script, `fiba_sorular_ve_siklar.csv` dosyasını okuyup `static/sorular.json` dosyasını oluşturur.
+
 ## 🚀 Railway'de Deploy
 
-Projeyi Railway'e deploy etmek için:
+Proje Railway için hazırlanmıştır. Deploy için:
 
-1. GitHub repository'yi hazırlayın:
+1. **GitHub repository'yi hazırlayın:**
 ```bash
 git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin https://github.com/Sey1tayd/Fiba_Questions_Set.git
+git remote add origin <your-github-repo-url>
 git push -u origin main
 ```
 
-2. Railway'de:
+2. **Railway'de deploy:**
+   - Railway hesabınıza giriş yapın
    - Yeni proje oluşturun
-   - GitHub repository'yi bağlayın
-   - Railway otomatik olarak Node.js projesini algılayacak ve deploy edecek
+   - "Deploy from GitHub repo" seçeneğini seçin
+   - Repository'nizi bağlayın
+   - Railway otomatik olarak `package.json` ve `railway.json` dosyalarını algılayacak
+   - Node.js environment'ı otomatik kurulacak
+   - Deploy başlatılacak
+
+3. **Environment Variables (Opsiyonel):**
+   - Railway dashboard'dan environment variables ekleyebilirsiniz
+   - `PORT` değişkeni otomatik olarak Railway tarafından ayarlanır
+
+4. **Health Check:**
+   - Uygulama `/health` endpoint'i ile health check yapılabilir
+   - Railway otomatik olarak bu endpoint'i kullanır
 
 ## 💻 Tarayıcı Desteği
 
@@ -102,6 +137,15 @@ git push -u origin main
 - Şıklar her soruda rastgele karıştırılır
 - Tüm soruları tamamladıktan sonra özet ekranı gösterilir
 - Sayfa yenilendiğinde ilerleme sıfırlanır (kalıcı kayıt yoktur)
+- Uygulama Node.js/Express server ile çalışır
+- Django dosyaları gelecekte kullanılmak üzere korunmuştur ancak Railway deployment'ı Node.js kullanır
+
+## 🔧 Teknik Detaylar
+
+- **Backend:** Node.js + Express
+- **Frontend:** Vanilla JavaScript, HTML5, CSS3
+- **Deployment:** Railway.app
+- **Port:** Environment variable'dan alınır (Railway otomatik ayarlar)
 
 ## 🎨 Özelleştirme
 

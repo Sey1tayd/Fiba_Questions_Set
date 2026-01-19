@@ -253,14 +253,49 @@
     </div>
 
     <script>
+        // Kullanıcı kontrolü
+        const currentUser = localStorage.getItem('currentUser');
+        const userType = localStorage.getItem('userType');
+        
+        if (!currentUser || !userType) {
+            window.location.href = 'login.html';
+        }
+        
+        // Çıkış butonu ekle
+        const logoutBtn = document.createElement('a');
+        logoutBtn.href = 'login.html';
+        logoutBtn.textContent = 'Çıkış Yap';
+        logoutBtn.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: bold; cursor: pointer; text-decoration: none; z-index: 1000;';
+        logoutBtn.onclick = function() {
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('userType');
+        };
+        document.body.appendChild(logoutBtn);
+
         let sorular = [];
         let currentQuestionIndex = 0;
         let selectedAnswer = null;
-        let stats = {
-            correct: 0,
-            incorrect: 0,
-            total: 0
-        };
+        
+        // İstatistikleri localStorage'dan yükle veya sıfırla
+        function loadUserStats() {
+            const statsKey = `stats_${currentUser}`;
+            const savedStats = localStorage.getItem(statsKey);
+            if (savedStats) {
+                return JSON.parse(savedStats);
+            }
+            return {
+                correct: 0,
+                incorrect: 0,
+                total: 0
+            };
+        }
+        
+        function saveUserStats(stats) {
+            const statsKey = `stats_${currentUser}`;
+            localStorage.setItem(statsKey, JSON.stringify(stats));
+        }
+        
+        let stats = loadUserStats();
         let currentShuffledOptions = []; // Karıştırılmış şıklar
         let optionMapping = {}; // Yeni sıradaki şık -> orijinal şık harfi eşleşmesi
 
@@ -293,9 +328,9 @@
             const progress = ((index + 1) / sorular.length) * 100;
             document.getElementById('progressBar').style.width = progress + '%';
 
-            // Soru bilgisi
+            // Soru bilgisi (kullanıcı adını da göster)
             document.getElementById('questionInfo').textContent = 
-                `Soru ${index + 1} / ${sorular.length} - ${soru.baslik}`;
+                `${currentUser} - Soru ${index + 1} / ${sorular.length} - ${soru.baslik}`;
 
             // Soru metni (Ornek_Metin) - yalın olarak
             document.getElementById('questionBox').textContent = soru.soru_metni || 'Soru metni yok';
@@ -364,6 +399,9 @@
             } else {
                 stats.incorrect++;
             }
+            
+            // İstatistikleri kaydet
+            saveUserStats(stats);
 
             // Şıkları renklendir
             document.querySelectorAll('.option').forEach(opt => {
@@ -413,7 +451,8 @@
             explanationBox.innerHTML = explanationHTML;
             explanationBox.style.display = 'block';
 
-            // İstatistikleri güncelle
+            // İstatistikleri güncelle ve kaydet
+            saveUserStats(stats);
             document.getElementById('correctCount').textContent = stats.correct;
             document.getElementById('incorrectCount').textContent = stats.incorrect;
             document.getElementById('totalAnswered').textContent = stats.total;
@@ -429,7 +468,15 @@
         // Event listeners
         document.getElementById('nextBtn').addEventListener('click', nextQuestion);
 
-        // Sayfa yüklendiğinde soruları yükle
+        // Sayfa yüklendiğinde istatistikleri göster
+        function updateStatsDisplay() {
+            document.getElementById('correctCount').textContent = stats.correct;
+            document.getElementById('incorrectCount').textContent = stats.incorrect;
+            document.getElementById('totalAnswered').textContent = stats.total;
+        }
+        
+        // Sayfa yüklendiğinde istatistikleri göster ve soruları yükle
+        updateStatsDisplay();
         loadQuestions();
     </script>
 </body>
