@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TBF Resmi Yorumlar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('background.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 248, 220, 0.95); /* Cream/Beige - background ile uyumlu */
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(139, 69, 19, 0.4);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+            margin: 20px;
+            border: 2px solid rgba(222, 184, 135, 0.5);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #8B4513; /* SaddleBrown */
+        }
+
+        .header h1 {
+            color: #8B4513; /* SaddleBrown - login sayfasıyla uyumlu */
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.2);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: rgba(222, 184, 135, 0.3); /* BurlyWood açık ton */
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #CD853F 0%, #8B4513 100%); /* Peru to SaddleBrown */
+            transition: width 0.3s ease;
+        }
+
+        .question-info {
+            text-align: center;
+            color: #654321; /* DarkBrown */
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        .question-box {
+            padding: 20px;
+            margin-bottom: 25px;
+            font-size: 1.2em;
+            line-height: 1.6;
+            color: #654321;
+        }
+
+        .options-container {
+            margin-bottom: 30px;
+        }
+
+        .option {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #DEB887; /* BurlyWood */
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            font-size: 1.1em;
+            color: #654321;
+            box-shadow: 0 2px 5px rgba(139, 69, 19, 0.1);
+        }
+
+        .option:hover {
+            border-color: #CD853F; /* Peru */
+            background: rgba(255, 245, 230, 0.9); /* AntiqueWhite */
+            transform: translateX(5px);
+            box-shadow: 0 4px 10px rgba(139, 69, 19, 0.2);
+        }
+
+        .option.selected {
+            border-color: #8B4513; /* SaddleBrown */
+            background: rgba(255, 228, 196, 0.8); /* Bisque */
+        }
+
+        .option.correct {
+            border-color: #2d8659;
+            background: rgba(144, 238, 144, 0.3); /* LightGreen - uyumlu ton */
+            color: #1a5a3a;
+        }
+
+        .option.incorrect {
+            border-color: #8B4513;
+            background: rgba(255, 182, 193, 0.3); /* LightPink - uyumlu ton */
+            color: #654321;
+        }
+
+        .option.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .option-label {
+            font-weight: bold;
+            color: #8B4513; /* SaddleBrown */
+            margin-right: 15px;
+            min-width: 30px;
+        }
+
+        .explanation-box {
+            background: rgba(255, 255, 255, 0.9);
+            border-left: 4px solid #CD853F; /* Peru */
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            font-size: 1em;
+            line-height: 1.6;
+            color: #654321; /* DarkBrown */
+        }
+
+        .explanation-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #8B4513;
+            margin-bottom: 10px;
+        }
+
+        .explanation-section {
+            margin-bottom: 15px;
+        }
+
+        .explanation-section-label {
+            font-weight: bold;
+            color: #8B4513;
+            margin-bottom: 5px;
+        }
+
+        .explanation-section-content {
+            color: #654321;
+            margin-left: 10px;
+        }
+
+        .next-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #2d8659 0%, #1a5a3a 100%); /* Yeşil ton */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(45, 134, 89, 0.3);
+        }
+
+        .next-btn:hover {
+            background: linear-gradient(135deg, #3da870 0%, #2d8659 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(45, 134, 89, 0.4);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(222, 184, 135, 0.5); /* BurlyWood */
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #8B4513; /* SaddleBrown */
+            text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.2);
+        }
+
+        .stat-label {
+            color: #654321; /* DarkBrown */
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TBF Resmi Yorumlar</h1>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+            <div class="question-info" id="questionInfo"></div>
+        </div>
+
+        <div id="questionContainer">
+            <div class="question-box" id="questionBox"></div>
+            
+            <div class="options-container" id="optionsContainer"></div>
+            
+            <div class="explanation-box" id="explanationBox" style="display: none;"></div>
+            
+            <button class="next-btn" id="nextBtn" style="display: none;">Sonraki Soru</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="correctCount">0</div>
+                <div class="stat-label">Doğru</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="incorrectCount">0</div>
+                <div class="stat-label">Yanlış</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalAnswered">0</div>
+                <div class="stat-label">Cevaplanan</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sorular = [];
+        let currentQuestionIndex = 0;
+        let selectedAnswer = null;
+        let stats = {
+            correct: 0,
+            incorrect: 0,
+            total: 0
+        };
+        let currentShuffledOptions = []; // Karıştırılmış şıklar
+        let optionMapping = {}; // Yeni sıradaki şık -> orijinal şık harfi eşleşmesi
+
+        // JSON dosyasını yükle
+        async function loadQuestions() {
+            try {
+                const response = await fetch('sorular.json');
+                sorular = await response.json();
+                showQuestion(0);
+            } catch (error) {
+                console.error('Sorular yüklenirken hata:', error);
+                document.getElementById('questionContainer').innerHTML = 
+                    '<div style="text-align: center; padding: 40px; color: red;">Sorular yüklenemedi. Lütfen sorular.json dosyasının mevcut olduğundan emin olun.</div>';
+            }
+        }
+
+        function showQuestion(index) {
+            if (index >= sorular.length) {
+                // Tüm sorular bitti
+                document.getElementById('questionContainer').innerHTML = 
+                    '<div style="text-align: center; padding: 40px;"><h2>Tebrikler! Tüm soruları tamamladınız.</h2><p style="margin-top: 20px;">Doğru: ' + stats.correct + ' | Yanlış: ' + stats.incorrect + '</p></div>';
+                return;
+            }
+
+            const soru = sorular[index];
+            currentQuestionIndex = index;
+            selectedAnswer = null;
+
+            // İlerleme çubuğu
+            const progress = ((index + 1) / sorular.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+
+            // Soru bilgisi
+            document.getElementById('questionInfo').textContent = 
+                `Soru ${index + 1} / ${sorular.length} - ${soru.baslik}`;
+
+            // Soru metni (Ornek_Metin) - yalın olarak
+            document.getElementById('questionBox').textContent = soru.soru_metni || 'Soru metni yok';
+
+            // Şıkları karıştır (Fisher-Yates shuffle algoritması)
+            const shuffledSiklar = [...soru.siklar];
+            for (let i = shuffledSiklar.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledSiklar[i], shuffledSiklar[j]] = [shuffledSiklar[j], shuffledSiklar[i]];
+            }
+            
+            // Karıştırılmış şıkları sakla
+            currentShuffledOptions = shuffledSiklar;
+            
+            // Yeni şık harfleri (A, B, C, D) ve orijinal şık harfleri arasında eşleşme oluştur
+            optionMapping = {};
+            const harfler = ['A', 'B', 'C', 'D'];
+            shuffledSiklar.forEach((sik, index) => {
+                optionMapping[harfler[index]] = sik.harf; // Yeni harf -> orijinal harf
+            });
+
+            // Şıklar
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            shuffledSiklar.forEach((sik, index) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option';
+                optionDiv.dataset.sik = harfler[index]; // Yeni harf (A, B, C, D)
+                optionDiv.dataset.originalSik = sik.harf; // Orijinal harf (doğru cevabı kontrol için)
+                optionDiv.innerHTML = `
+                    <span class="option-label">${harfler[index]})</span>
+                    <span>${sik.metin}</span>
+                `;
+                optionDiv.addEventListener('click', () => selectOption(harfler[index]));
+                optionsContainer.appendChild(optionDiv);
+            });
+
+            // Açıklama kutusunu gizle
+            document.getElementById('explanationBox').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'none';
+            
+            // Şıkları sıfırla
+            document.querySelectorAll('.option').forEach(opt => {
+                opt.classList.remove('correct', 'incorrect', 'disabled', 'selected');
+            });
+        }
+
+        function selectOption(sik) {
+            const explanationBox = document.getElementById('explanationBox');
+            if (explanationBox.style.display === 'block') {
+                return; // Açıklama zaten gösteriliyor
+            }
+
+            selectedAnswer = sik;
+            const soru = sorular[currentQuestionIndex];
+            // Seçilen şığın orijinal harfini bul
+            const selectedOriginalSik = optionMapping[sik];
+            // Doğru cevabı kontrol et (orijinal şık harfi ile)
+            const isCorrect = selectedOriginalSik === soru.dogru_sik;
+
+            // İstatistikleri güncelle
+            stats.total++;
+            if (isCorrect) {
+                stats.correct++;
+            } else {
+                stats.incorrect++;
+            }
+
+            // Şıkları renklendir
+            document.querySelectorAll('.option').forEach(opt => {
+                opt.classList.remove('selected');
+                opt.classList.add('disabled');
+                
+                const originalSikHarf = opt.dataset.originalSik; // Orijinal şık harfi
+                const displaySikHarf = opt.dataset.sik; // Görüntülenen şık harfi (A, B, C, D)
+                
+                // Doğru cevabı yeşil yap
+                if (originalSikHarf === soru.dogru_sik) {
+                    opt.classList.add('correct');
+                } 
+                // Seçilen yanlış cevabı kırmızı yap
+                else if (displaySikHarf === sik && !isCorrect) {
+                    opt.classList.add('incorrect');
+                }
+            });
+
+            // Açıklama kutusunu oluştur ve göster
+            let explanationHTML = '<div class="explanation-title">Açıklama</div>';
+            
+            // Baslik
+            if (soru.baslik) {
+                explanationHTML += '<div class="explanation-section">';
+                explanationHTML += '<div class="explanation-section-label">Başlık:</div>';
+                explanationHTML += '<div class="explanation-section-content">' + soru.baslik + '</div>';
+                explanationHTML += '</div>';
+            }
+            
+            // Aciklama_Metin
+            if (soru.aciklama_metin) {
+                explanationHTML += '<div class="explanation-section">';
+                explanationHTML += '<div class="explanation-section-label">Açıklama Metni:</div>';
+                explanationHTML += '<div class="explanation-section-content">' + soru.aciklama_metin + '</div>';
+                explanationHTML += '</div>';
+            }
+            
+            // Yorum
+            if (soru.yorum) {
+                explanationHTML += '<div class="explanation-section">';
+                explanationHTML += '<div class="explanation-section-label">Yorum:</div>';
+                explanationHTML += '<div class="explanation-section-content">' + soru.yorum + '</div>';
+                explanationHTML += '</div>';
+            }
+
+            explanationBox.innerHTML = explanationHTML;
+            explanationBox.style.display = 'block';
+
+            // İstatistikleri güncelle
+            document.getElementById('correctCount').textContent = stats.correct;
+            document.getElementById('incorrectCount').textContent = stats.incorrect;
+            document.getElementById('totalAnswered').textContent = stats.total;
+
+            // Sonraki soru butonunu göster
+            document.getElementById('nextBtn').style.display = 'block';
+        }
+
+        function nextQuestion() {
+            showQuestion(currentQuestionIndex + 1);
+        }
+
+        // Event listeners
+        document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+
+        // Sayfa yüklendiğinde soruları yükle
+        loadQuestions();
+    </script>
+</body>
+</html>

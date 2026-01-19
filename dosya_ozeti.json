@@ -1,0 +1,39 @@
+{
+  "toplam_soru": 425,
+  "sutunlar": [
+    "Soru_ID",
+    "Baslik",
+    "Aciklama_No",
+    "Ornek_No",
+    "Ornek_Tipi",
+    "Senaryo",
+    "Soru",
+    "Kategori",
+    "Sik_Sayisi",
+    "A",
+    "B",
+    "C",
+    "D",
+    "Dogru_Sik",
+    "Dogru_Cevap",
+    "Dogru_Cevap_Gerekce",
+    "Kaynak_Yorum"
+  ],
+  "kategoriler": {
+    "statement": 138,
+    "substitution": 24,
+    "free_throws": 50,
+    "foul": 93,
+    "possession": 88,
+    "shot_clock": 31,
+    "timeout": 1
+  },
+  "ornek_tipleri": {
+    "Örnek": 419,
+    "Diyagram": 6
+  },
+  "sik_sayilari": {
+    "2": 163,
+    "3": 262
+  }
+}

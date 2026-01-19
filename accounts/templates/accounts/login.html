@@ -1,0 +1,224 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş Yap - TBF Konya</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: url("{% static 'images/background.jpeg' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: rgba(255, 245, 230, 0.95); /* AntiqueWhite - sıcak tonlu */
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(139, 69, 19, 0.4);
+            border: 2px solid rgba(222, 184, 135, 0.5); /* BurlyWood border */
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            color: #8B4513; /* SaddleBrown */
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.2);
+        }
+
+        .login-header p {
+            color: #A0522D; /* Sienna */
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #8B4513; /* SaddleBrown */
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #DEB887; /* BurlyWood */
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #654321; /* DarkBrown */
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #CD853F; /* Peru */
+            background: #FFF;
+            box-shadow: 0 0 0 3px rgba(205, 133, 63, 0.2);
+        }
+
+        .form-group input::placeholder {
+            color: #A0826D; /* Lighter brown */
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); /* Peru to SaddleBrown */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+            background: linear-gradient(135deg, #D2691E 0%, #A0522D 100%);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 12px 18px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: rgba(34, 139, 34, 0.2); /* ForestGreen with transparency */
+            color: #228B22;
+            border: 1px solid rgba(34, 139, 34, 0.3);
+        }
+
+        .alert-error {
+            background: rgba(220, 20, 60, 0.2); /* Crimson with transparency */
+            color: #DC143C;
+            border: 1px solid rgba(220, 20, 60, 0.3);
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 25px;
+            color: #8B4513;
+            font-size: 14px;
+        }
+
+        .footer-text a {
+            color: #CD853F;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer-text a:hover {
+            color: #A0522D;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 30px 20px;
+            }
+
+            .login-header h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>🏀 TBF Konya</h1>
+                <p>Hesabınıza giriş yapın</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="POST" action="{% url 'accounts:login' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="username">Kullanıcı Adı</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        placeholder="Kullanıcı adınızı girin" 
+                        required 
+                        autofocus
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Şifre</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Şifrenizi girin" 
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="btn-login">Giriş Yap</button>
+            </form>
+
+            <div class="footer-text">
+                <p>Hesabınız yok mu? <a href="#">Kayıt Ol</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

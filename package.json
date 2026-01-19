@@ -1,0 +1,20 @@
+{
+  "name": "tbf-resmi-yorumlar",
+  "version": "1.0.0",
+  "description": "TBF Resmi Yorumlar - FIBA Soru Uygulaması",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "tbf",
+    "fiba",
+    "basketbol",
+    "hakem"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
