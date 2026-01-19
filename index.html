@@ -16,13 +16,20 @@
             background-image: url('background.jpeg');
             background-size: cover;
             background-position: center;
-            background-attachment: fixed;
             background-repeat: no-repeat;
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
-            padding: 20px;
+            align-items: flex-start;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                background-attachment: scroll;
+                padding: 5px;
+            }
         }
 
         .container {
@@ -32,8 +39,24 @@
             max-width: 900px;
             width: 100%;
             padding: 40px;
-            margin: 20px;
+            margin: 20px auto;
             border: 2px solid rgba(222, 184, 135, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+                margin: 10px auto;
+                border-radius: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+                margin: 5px auto;
+                border-radius: 10px;
+            }
         }
 
         .header {
@@ -48,6 +71,20 @@
             font-size: 2em;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5em;
+                margin-bottom: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.2em;
+                margin-bottom: 5px;
+            }
         }
 
         .progress-bar {
@@ -71,6 +108,24 @@
             margin-bottom: 20px;
             font-size: 1.1em;
             font-weight: 500;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        @media (max-width: 768px) {
+            .question-info {
+                font-size: 0.95em;
+                margin-bottom: 15px;
+                padding: 0 5px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .question-info {
+                font-size: 0.85em;
+                margin-bottom: 10px;
+                line-height: 1.4;
+            }
         }
 
         .question-box {
@@ -80,6 +135,26 @@
             font-weight: bold;
             line-height: 1.6;
             color: #654321;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        @media (max-width: 768px) {
+            .question-box {
+                padding: 15px;
+                margin-bottom: 20px;
+                font-size: 1.2em;
+                line-height: 1.5;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .question-box {
+                padding: 12px;
+                margin-bottom: 15px;
+                font-size: 1em;
+                line-height: 1.4;
+            }
         }
 
         .options-container {
@@ -99,6 +174,29 @@
             font-size: 1.1em;
             color: #654321;
             box-shadow: 0 2px 5px rgba(139, 69, 19, 0.1);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            min-height: 44px; /* Touch-friendly minimum height */
+            -webkit-tap-highlight-color: rgba(139, 69, 19, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .option {
+                padding: 12px 15px;
+                margin-bottom: 12px;
+                font-size: 1em;
+                min-height: 48px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .option {
+                padding: 10px 12px;
+                margin-bottom: 10px;
+                font-size: 0.95em;
+                min-height: 44px;
+                flex-wrap: wrap;
+            }
         }
 
         .option:hover {
@@ -106,6 +204,18 @@
             background: rgba(255, 245, 230, 0.9); /* AntiqueWhite */
             transform: translateX(5px);
             box-shadow: 0 4px 10px rgba(139, 69, 19, 0.2);
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .option:hover {
+                transform: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .option:hover {
+                transform: none;
+            }
         }
 
         .option.selected {
@@ -135,6 +245,14 @@
             color: #8B4513; /* SaddleBrown */
             margin-right: 15px;
             min-width: 30px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 480px) {
+            .option-label {
+                margin-right: 10px;
+                min-width: 25px;
+            }
         }
 
         .explanation-box {
@@ -146,6 +264,27 @@
             font-size: 1em;
             line-height: 1.6;
             color: #654321; /* DarkBrown */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        @media (max-width: 768px) {
+            .explanation-box {
+                padding: 15px;
+                margin-top: 15px;
+                font-size: 0.95em;
+                line-height: 1.5;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .explanation-box {
+                padding: 12px;
+                margin-top: 12px;
+                font-size: 0.9em;
+                line-height: 1.4;
+                border-left-width: 3px;
+            }
         }
 
         .explanation-title {
@@ -153,6 +292,20 @@
             font-weight: bold;
             color: #8B4513;
             margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .explanation-title {
+                font-size: 1.1em;
+                margin-bottom: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .explanation-title {
+                font-size: 1em;
+                margin-bottom: 6px;
+            }
         }
 
         .explanation-section {
@@ -168,6 +321,14 @@
         .explanation-section-content {
             color: #654321;
             margin-left: 10px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        @media (max-width: 480px) {
+            .explanation-section-content {
+                margin-left: 5px;
+            }
         }
 
         .next-btn {
@@ -183,6 +344,26 @@
             transition: all 0.3s ease;
             margin-top: 20px;
             box-shadow: 0 4px 15px rgba(45, 134, 89, 0.3);
+            min-height: 48px; /* Touch-friendly */
+            -webkit-tap-highlight-color: rgba(45, 134, 89, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .next-btn {
+                padding: 12px;
+                font-size: 1.1em;
+                margin-top: 15px;
+                min-height: 48px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .next-btn {
+                padding: 12px;
+                font-size: 1em;
+                margin-top: 12px;
+                min-height: 44px;
+            }
         }
 
         .next-btn:hover {
@@ -197,6 +378,23 @@
             margin-top: 20px;
             padding-top: 20px;
             border-top: 2px solid rgba(222, 184, 135, 0.5); /* BurlyWood */
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                margin-top: 15px;
+                padding-top: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats {
+                margin-top: 12px;
+                padding-top: 12px;
+                gap: 5px;
+            }
         }
 
         .stat-item {
@@ -208,6 +406,18 @@
             font-weight: bold;
             color: #8B4513; /* SaddleBrown */
             text-shadow: 1px 1px 2px rgba(139, 69, 19, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .stat-value {
+                font-size: 1.7em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stat-value {
+                font-size: 1.5em;
+            }
         }
 
         .stat-label {
@@ -266,12 +476,31 @@
         const logoutBtn = document.createElement('a');
         logoutBtn.href = 'login.html';
         logoutBtn.textContent = 'Çıkış Yap';
-        logoutBtn.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); color: white; border: none; border-radius: 8px; font-size: 1em; font-weight: bold; cursor: pointer; text-decoration: none; z-index: 1000;';
+        logoutBtn.style.cssText = 'position: fixed; top: 10px; right: 10px; padding: 10px 15px; background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); color: white; border: none; border-radius: 8px; font-size: 0.9em; font-weight: bold; cursor: pointer; text-decoration: none; z-index: 1000; min-height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(139, 69, 19, 0.3); -webkit-tap-highlight-color: rgba(205, 133, 63, 0.3);';
         logoutBtn.onclick = function() {
             localStorage.removeItem('currentUser');
             localStorage.removeItem('userType');
         };
         document.body.appendChild(logoutBtn);
+
+        // Mobil için logout butonu stilini ayarla
+        if (window.innerWidth <= 480) {
+            logoutBtn.style.padding = '8px 12px';
+            logoutBtn.style.fontSize = '0.8em';
+            logoutBtn.style.minHeight = '36px';
+        }
+
+        window.addEventListener('resize', function() {
+            if (window.innerWidth <= 480) {
+                logoutBtn.style.padding = '8px 12px';
+                logoutBtn.style.fontSize = '0.8em';
+                logoutBtn.style.minHeight = '36px';
+            } else {
+                logoutBtn.style.padding = '10px 15px';
+                logoutBtn.style.fontSize = '0.9em';
+                logoutBtn.style.minHeight = '40px';
+            }
+        });
 
         let sorular = [];
         let currentQuestionIndex = 0;
