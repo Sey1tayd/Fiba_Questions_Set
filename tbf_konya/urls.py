@@ -16,6 +16,7 @@ urlpatterns = [
     path('sorular.json', views.serve_json, {'filename': 'sorular.json'}, name='sorular_json'),
     path('isimler.json', views.serve_json, {'filename': 'isimler.json'}, name='isimler_json'),
     path('isimler.txt', views.serve_txt, {'filename': 'isimler.txt'}, name='isimler_txt'),
+    path('background.jpeg', views.serve_image, {'filename': 'background.jpeg'}, name='background_image'),
 ]
 
 # Static files serving in development

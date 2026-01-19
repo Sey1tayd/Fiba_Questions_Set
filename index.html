@@ -425,9 +425,206 @@
             font-size: 0.9em;
             font-weight: 500;
         }
+
+        /* Navigasyon Paneli */
+        .nav-toggle {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 2px 8px rgba(139, 69, 19, 0.3);
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 480px) {
+            .nav-toggle {
+                padding: 8px 12px;
+                font-size: 0.8em;
+                min-height: 36px;
+            }
+        }
+
+        .nav-panel {
+            position: fixed;
+            top: 0;
+            left: -350px;
+            width: 350px;
+            height: 100vh;
+            background: rgba(255, 248, 220, 0.98);
+            box-shadow: 2px 0 10px rgba(139, 69, 19, 0.3);
+            z-index: 1000;
+            overflow-y: auto;
+            transition: left 0.3s ease;
+            border-right: 2px solid rgba(222, 184, 135, 0.5);
+        }
+
+        .nav-panel.open {
+            left: 0;
+        }
+
+        @media (max-width: 768px) {
+            .nav-panel {
+                width: 300px;
+                left: -300px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-panel {
+                width: 100%;
+                left: -100%;
+            }
+        }
+
+        .nav-panel-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #8B4513 0%, #CD853F 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .nav-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-category {
+            border-bottom: 1px solid rgba(222, 184, 135, 0.3);
+        }
+
+        .nav-category-header {
+            padding: 15px 20px;
+            background: rgba(222, 184, 135, 0.2);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #654321;
+            transition: background 0.2s ease;
+        }
+
+        .nav-category-header:hover {
+            background: rgba(222, 184, 135, 0.4);
+        }
+
+        .nav-category-header.active {
+            background: rgba(205, 133, 63, 0.3);
+        }
+
+        .nav-category-count {
+            background: #8B4513;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+
+        .nav-category-arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .nav-category.expanded .nav-category-arrow {
+            transform: rotate(90deg);
+        }
+
+        .nav-questions {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .nav-category.expanded .nav-questions {
+            max-height: 500px;
+        }
+
+        .nav-question-item {
+            padding: 10px 20px 10px 40px;
+            cursor: pointer;
+            color: #654321;
+            border-bottom: 1px solid rgba(222, 184, 135, 0.2);
+            transition: background 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-question-item:hover {
+            background: rgba(255, 228, 196, 0.5);
+        }
+
+        .nav-question-item.active {
+            background: rgba(205, 133, 63, 0.3);
+            font-weight: bold;
+        }
+
+        .nav-question-number {
+            margin-right: 10px;
+            color: #8B4513;
+            font-weight: bold;
+            min-width: 30px;
+        }
+
+        .nav-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 999;
+        }
+
+        .nav-overlay.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
+    <!-- Navigasyon Toggle Butonu -->
+    <button class="nav-toggle" id="navToggle">☰ Sorular</button>
+
+    <!-- Navigasyon Overlay (mobil için) -->
+    <div class="nav-overlay" id="navOverlay"></div>
+
+    <!-- Navigasyon Paneli -->
+    <div class="nav-panel" id="navPanel">
+        <div class="nav-panel-header">
+            Soru Navigasyonu
+            <button class="nav-close" id="navClose">×</button>
+        </div>
+        <div id="navContent"></div>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>TBF Resmi Yorumlar</h1>
@@ -476,7 +673,7 @@
         const logoutBtn = document.createElement('a');
         logoutBtn.href = 'login.html';
         logoutBtn.textContent = 'Çıkış Yap';
-        logoutBtn.style.cssText = 'position: fixed; top: 10px; right: 10px; padding: 10px 15px; background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); color: white; border: none; border-radius: 8px; font-size: 0.9em; font-weight: bold; cursor: pointer; text-decoration: none; z-index: 1000; min-height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(139, 69, 19, 0.3); -webkit-tap-highlight-color: rgba(205, 133, 63, 0.3);';
+        logoutBtn.style.cssText = 'position: fixed; top: 10px; right: 10px; padding: 10px 15px; background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); color: white; border: none; border-radius: 8px; font-size: 0.9em; font-weight: bold; cursor: pointer; text-decoration: none; z-index: 1002; min-height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(139, 69, 19, 0.3); -webkit-tap-highlight-color: rgba(205, 133, 63, 0.3);';
         logoutBtn.onclick = function() {
             localStorage.removeItem('currentUser');
             localStorage.removeItem('userType');
@@ -528,12 +725,121 @@
         let stats = loadUserStats();
         let currentShuffledOptions = []; // Karıştırılmış şıklar
         let optionMapping = {}; // Yeni sıradaki şık -> orijinal şık harfi eşleşmesi
+        let questionsByCategory = {}; // Başlıklara göre gruplandırılmış sorular
+        let categoryIndexMap = {}; // Başlık -> soru indexleri eşleşmesi
+
+        // Navigasyon paneli kontrolü
+        const navToggle = document.getElementById('navToggle');
+        const navPanel = document.getElementById('navPanel');
+        const navClose = document.getElementById('navClose');
+        const navOverlay = document.getElementById('navOverlay');
+
+        navToggle.addEventListener('click', () => {
+            navPanel.classList.add('open');
+            navOverlay.classList.add('show');
+        });
+
+        navClose.addEventListener('click', () => {
+            navPanel.classList.remove('open');
+            navOverlay.classList.remove('show');
+        });
+
+        navOverlay.addEventListener('click', () => {
+            navPanel.classList.remove('open');
+            navOverlay.classList.remove('show');
+        });
+
+        // Soruları başlıklarına göre gruplandır
+        function groupQuestionsByCategory() {
+            questionsByCategory = {};
+            categoryIndexMap = {};
+            
+            sorular.forEach((soru, index) => {
+                const baslik = soru.baslik || 'Diğer';
+                if (!questionsByCategory[baslik]) {
+                    questionsByCategory[baslik] = [];
+                    categoryIndexMap[baslik] = [];
+                }
+                questionsByCategory[baslik].push(soru);
+                categoryIndexMap[baslik].push(index);
+            });
+        }
+
+        // Navigasyon panelini oluştur
+        function buildNavigationPanel() {
+            const navContent = document.getElementById('navContent');
+            navContent.innerHTML = '';
+
+            Object.keys(questionsByCategory).forEach((baslik, catIndex) => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'nav-category';
+                if (catIndex === 0) {
+                    categoryDiv.classList.add('expanded');
+                }
+
+                const header = document.createElement('div');
+                header.className = 'nav-category-header';
+                header.innerHTML = `
+                    <span>${baslik}</span>
+                    <div style="display: flex; align-items: center;">
+                        <span class="nav-category-count">${questionsByCategory[baslik].length}</span>
+                        <span class="nav-category-arrow">▶</span>
+                    </div>
+                `;
+                header.addEventListener('click', () => {
+                    categoryDiv.classList.toggle('expanded');
+                    header.classList.toggle('active');
+                });
+
+                const questionsDiv = document.createElement('div');
+                questionsDiv.className = 'nav-questions';
+
+                questionsByCategory[baslik].forEach((soru, qIndex) => {
+                    const questionItem = document.createElement('div');
+                    questionItem.className = 'nav-question-item';
+                    const globalIndex = categoryIndexMap[baslik][qIndex];
+                    questionItem.innerHTML = `
+                        <span class="nav-question-number">${globalIndex + 1}</span>
+                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${soru.soru_metni.substring(0, 50)}${soru.soru_metni.length > 50 ? '...' : ''}</span>
+                    `;
+                    questionItem.addEventListener('click', () => {
+                        // Panel'i kapat (mobil için - her zaman kapat)
+                        navPanel.classList.remove('open');
+                        navOverlay.classList.remove('show');
+                        // Soruya git
+                        showQuestion(globalIndex);
+                        // Aktif soruyu işaretle
+                        updateActiveQuestion(globalIndex);
+                    });
+                    questionItem.dataset.questionIndex = globalIndex;
+                    questionsDiv.appendChild(questionItem);
+                });
+
+                categoryDiv.appendChild(header);
+                categoryDiv.appendChild(questionsDiv);
+                navContent.appendChild(categoryDiv);
+            });
+        }
+
+        // Aktif soruyu işaretle
+        function updateActiveQuestion(index) {
+            document.querySelectorAll('.nav-question-item').forEach(item => {
+                item.classList.remove('active');
+                if (parseInt(item.dataset.questionIndex) === index) {
+                    item.classList.add('active');
+                    // Scroll to active item
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
 
         // JSON dosyasını yükle
         async function loadQuestions() {
             try {
                 const response = await fetch('sorular.json');
                 sorular = await response.json();
+                groupQuestionsByCategory();
+                buildNavigationPanel();
                 showQuestion(0);
             } catch (error) {
                 console.error('Sorular yüklenirken hata:', error);
@@ -553,6 +859,9 @@
             const soru = sorular[index];
             currentQuestionIndex = index;
             selectedAnswer = null;
+
+            // Aktif soruyu navigasyon panelinde işaretle
+            updateActiveQuestion(index);
 
             // İlerleme çubuğu
             const progress = ((index + 1) / sorular.length) * 100;
