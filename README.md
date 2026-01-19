@@ -1,8 +1,8 @@
-# TBF Resmi Yorumlar
+# **TBF Resmi Yorumlar**
 
 424 adet TBF Resmi Yorumlar/FIBA basketbol kuralları sorusunu interaktif şekilde çözmek için hazırlanmış web uygulaması.
 
-## 📁 Proje Yapısı
+## **📁 Proje Yapısı**
 
 ```
 TBF_KONYA/
@@ -21,14 +21,14 @@ TBF_KONYA/
 └── tbf_konya/          # Django proje dosyaları (gelecek kullanım için)
 ```
 
-## 🚀 Kurulum ve Kullanım
+## **🚀 Kurulum ve Kullanım**
 
-### Gereksinimler
+### **Gereksinimler**
 
 - Node.js (v14 veya üzeri)
 - npm veya yarn
 
-### Yerel Olarak Çalıştırma
+### **Yerel Olarak Çalıştırma**
 
 **Node.js ile (Önerilen):**
 ```bash
@@ -50,7 +50,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## ✨ Özellikler
+## **✨ Özellikler**
 
 - ✅ 424 soruyu sırayla çözme
 - ✅ İlerleme çubuğu ile görsel takip
@@ -63,7 +63,7 @@ pip install -r requirements.txt
 - ✅ Responsive tasarım
 - ✅ Modern ve sade arayüz
 
-## 🎯 Kullanım Akışı
+## **🎯 Kullanım Akışı**
 
 1. Sayfa yüklendiğinde ilk soru otomatik gösterilir
 2. Soru metni (Ornek_Metin) yalın şekilde görüntülenir
@@ -76,14 +76,14 @@ pip install -r requirements.txt
 6. Doğru şık yeşil renkle, yanlış seçilen şık kırmızı renkle vurgulanır
 7. "Sonraki Soru" butonu ile devam edin
 
-## 📊 İstatistikler
+## **📊 İstatistikler**
 
 Sayfanın altında anlık istatistikler görüntülenir:
 - **Doğru**: Doğru cevaplanan soru sayısı
 - **Yanlış**: Yanlış cevaplanan soru sayısı
 - **Cevaplanan**: Toplam cevaplanan soru sayısı
 
-## 🔄 Veri Güncelleme
+## **🔄 Veri Güncelleme**
 
 Eğer CSV dosyasını güncellediyseniz, JSON dosyasını yeniden oluşturun:
 
@@ -93,7 +93,7 @@ python csv_to_json_new.py
 
 Script, `fiba_sorular_ve_siklar.csv` dosyasını okuyup `static/sorular.json` dosyasını oluşturur.
 
-## 🚀 Railway'de Deploy
+## **🚀 Railway'de Deploy**
 
 Proje Railway için hazırlanmıştır. Deploy için:
 
@@ -124,14 +124,14 @@ git push -u origin main
    - Uygulama `/health` endpoint'i ile health check yapılabilir
    - Railway otomatik olarak bu endpoint'i kullanır
 
-## 💻 Tarayıcı Desteği
+## **💻 Tarayıcı Desteği**
 
 - Chrome (önerilir)
 - Firefox
 - Edge
 - Safari
 
-## 📝 Notlar
+## **📝 Notlar**
 
 - Sorular sırayla gösterilir
 - Şıklar her soruda rastgele karıştırılır
@@ -140,17 +140,17 @@ git push -u origin main
 - Uygulama Node.js/Express server ile çalışır
 - Django dosyaları gelecekte kullanılmak üzere korunmuştur ancak Railway deployment'ı Node.js kullanır
 
-## 🔧 Teknik Detaylar
+## **🔧 Teknik Detaylar**
 
 - **Backend:** Node.js + Express
 - **Frontend:** Vanilla JavaScript, HTML5, CSS3
 - **Deployment:** Railway.app
 - **Port:** Environment variable'dan alınır (Railway otomatik ayarlar)
 
-## 🎨 Özelleştirme
+## **🎨 Özelleştirme**
 
 `index.html` dosyasındaki CSS bölümünü düzenleyerek renkleri, fontları ve düzeni özelleştirebilirsiniz.
 
-## 📞 Destek
+## **📞 Destek**
 
 Sorun yaşarsanız veya önerileriniz varsa lütfen iletişime geçin.
