@@ -856,6 +856,27 @@
             const key = getAnswersKey();
             localStorage.removeItem(key);
         }
+
+        // Test bitirme sonuçlarını kaydet/yükle
+        function getTestResultKey() {
+            return `testResult_${currentUser}`;
+        }
+
+        function saveTestResult(resultData) {
+            const key = getTestResultKey();
+            localStorage.setItem(key, JSON.stringify(resultData));
+        }
+
+        function loadTestResult() {
+            const key = getTestResultKey();
+            const result = localStorage.getItem(key);
+            return result ? JSON.parse(result) : null;
+        }
+
+        function clearTestResult() {
+            const key = getTestResultKey();
+            localStorage.removeItem(key);
+        }
         
         let currentShuffledOptions = []; // Karıştırılmış şıklar
         let optionMapping = {}; // Yeni sıradaki şık -> orijinal şık harfi eşleşmesi
@@ -968,8 +989,95 @@
         }
 
         // JSON dosyasını yükle
+        function showTestResult(resultData) {
+            const { finalStats, wrongQuestions, totalQuestions } = resultData;
+            
+            let resultHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h2 style="color: #8B4513; margin-bottom: 20px;">Test Tamamlandı!</h2>
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 30px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="color: #654321; margin-bottom: 15px;">İstatistikler</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div>
+                                <div style="font-size: 2em; font-weight: bold; color: #2d8659;">${finalStats.correct}</div>
+                                <div style="color: #654321;">Doğru</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2em; font-weight: bold; color: #d32f2f;">${finalStats.incorrect}</div>
+                                <div style="color: #654321;">Yanlış</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2em; font-weight: bold; color: #654321;">${finalStats.unanswered}</div>
+                                <div style="color: #654321;">Cevaplanmadı</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2em; font-weight: bold; color: #8B4513;">${totalQuestions}</div>
+                                <div style="color: #654321;">Toplam Soru</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 1.2em; color: #654321;">
+                            Başarı Oranı: <strong style="color: #8B4513;">${finalStats.total > 0 ? ((finalStats.correct / finalStats.total) * 100).toFixed(1) : 0}%</strong>
+                        </div>
+                    </div>
+            `;
+
+            if (wrongQuestions && wrongQuestions.length > 0) {
+                resultHTML += `
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 15px; margin-top: 20px; text-align: left;">
+                        <h3 style="color: #d32f2f; margin-bottom: 15px;">Yanlış Cevaplanan Sorular (${wrongQuestions.length})</h3>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                `;
+                wrongQuestions.forEach(wq => {
+                    if (wq.status === 'wrong') {
+                        resultHTML += `
+                            <div style="padding: 10px; margin-bottom: 10px; background: rgba(255, 182, 193, 0.3); border-left: 4px solid #d32f2f; border-radius: 5px;">
+                                <strong>Soru ${wq.index}:</strong> ${wq.question}<br>
+                                <span style="color: #d32f2f;">Seçtiğiniz: ${wq.selected}</span> | 
+                                <span style="color: #2d8659;">Doğru: ${wq.correct}</span>
+                            </div>
+                        `;
+                    } else {
+                        resultHTML += `
+                            <div style="padding: 10px; margin-bottom: 10px; background: rgba(255, 245, 230, 0.5); border-left: 4px solid #CD853F; border-radius: 5px;">
+                                <strong>Soru ${wq.index}:</strong> ${wq.question}<br>
+                                <span style="color: #CD853F;">Cevaplanmadı</span>
+                            </div>
+                        `;
+                    }
+                });
+                resultHTML += `</div></div>`;
+            }
+
+            resultHTML += `
+                    <button id="newTestBtn" style="margin-top: 20px; padding: 15px 30px; background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
+                        Yeni Teste Başla
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('questionContainer').innerHTML = resultHTML;
+
+            // Yeni Teste Başla butonuna event listener ekle
+            document.getElementById('newTestBtn').addEventListener('click', function() {
+                clearTestResult();
+                clearAnswers();
+                // İstatistikleri sıfırla (sadece bu test için)
+                stats = { correct: 0, incorrect: 0, total: 0, tests_completed: stats.tests_completed };
+                updateStatsDisplay();
+                showQuestion(0);
+            });
+        }
+
         async function loadQuestions() {
             try {
+                // Önce test sonucu var mı kontrol et
+                const testResult = loadTestResult();
+                if (testResult) {
+                    // Test sonucu varsa göster
+                    showTestResult(testResult);
+                    return;
+                }
+
                 const response = await fetch('sorular.json');
                 sorular = await response.json();
                 groupQuestionsByCategory();
@@ -1245,71 +1353,19 @@
             await saveUserStats(stats);
             await logSessionComplete();
 
-            // Sonuç ekranı göster
-            let resultHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <h2 style="color: #8B4513; margin-bottom: 20px;">Test Tamamlandı!</h2>
-                    <div style="background: rgba(255, 255, 255, 0.9); padding: 30px; border-radius: 15px; margin-bottom: 20px;">
-                        <h3 style="color: #654321; margin-bottom: 15px;">İstatistikler</h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div>
-                                <div style="font-size: 2em; font-weight: bold; color: #2d8659;">${finalStats.correct}</div>
-                                <div style="color: #654321;">Doğru</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 2em; font-weight: bold; color: #d32f2f;">${finalStats.incorrect}</div>
-                                <div style="color: #654321;">Yanlış</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 2em; font-weight: bold; color: #654321;">${finalStats.unanswered}</div>
-                                <div style="color: #654321;">Cevaplanmadı</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 2em; font-weight: bold; color: #8B4513;">${sorular.length}</div>
-                                <div style="color: #654321;">Toplam Soru</div>
-                            </div>
-                        </div>
-                        <div style="font-size: 1.2em; color: #654321;">
-                            Başarı Oranı: <strong style="color: #8B4513;">${totalAnswered > 0 ? ((correctCount / totalAnswered) * 100).toFixed(1) : 0}%</strong>
-                        </div>
-                    </div>
-            `;
+            // Sonuçları kaydet
+            saveTestResult({
+                finalStats,
+                wrongQuestions,
+                totalQuestions: sorular.length
+            });
 
-            if (wrongQuestions.length > 0) {
-                resultHTML += `
-                    <div style="background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 15px; margin-top: 20px; text-align: left;">
-                        <h3 style="color: #d32f2f; margin-bottom: 15px;">Yanlış Cevaplanan Sorular (${wrongQuestions.length})</h3>
-                        <div style="max-height: 400px; overflow-y: auto;">
-                `;
-                wrongQuestions.forEach(wq => {
-                    if (wq.status === 'wrong') {
-                        resultHTML += `
-                            <div style="padding: 10px; margin-bottom: 10px; background: rgba(255, 182, 193, 0.3); border-left: 4px solid #d32f2f; border-radius: 5px;">
-                                <strong>Soru ${wq.index}:</strong> ${wq.question}<br>
-                                <span style="color: #d32f2f;">Seçtiğiniz: ${wq.selected}</span> | 
-                                <span style="color: #2d8659;">Doğru: ${wq.correct}</span>
-                            </div>
-                        `;
-                    } else {
-                        resultHTML += `
-                            <div style="padding: 10px; margin-bottom: 10px; background: rgba(255, 245, 230, 0.5); border-left: 4px solid #CD853F; border-radius: 5px;">
-                                <strong>Soru ${wq.index}:</strong> ${wq.question}<br>
-                                <span style="color: #CD853F;">Cevaplanmadı</span>
-                            </div>
-                        `;
-                    }
-                });
-                resultHTML += `</div></div>`;
-            }
-
-            resultHTML += `
-                    <button onclick="location.reload()" style="margin-top: 20px; padding: 15px 30px; background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
-                        Yeni Teste Başla
-                    </button>
-                </div>
-            `;
-
-            document.getElementById('questionContainer').innerHTML = resultHTML;
+            // Sonuç ekranını göster
+            showTestResult({
+                finalStats,
+                wrongQuestions,
+                totalQuestions: sorular.length
+            });
 
             // Cevapları temizle
             clearAnswers();
