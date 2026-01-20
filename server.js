@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +52,35 @@ async function initDb() {
     }
   } catch (err) {
     console.warn('Admin kullanıcısı oluşturulurken hata:', err.message);
+  }
+
+  // isimler.txt'deki isimleri veritabanına kaydet (listedeki kullanıcılar)
+  try {
+    const isimlerPath = path.join(__dirname, 'isimler.txt');
+    if (fs.existsSync(isimlerPath)) {
+      const isimlerContent = fs.readFileSync(isimlerPath, 'utf-8');
+      const isimler = isimlerContent
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+      
+      for (const isim of isimler) {
+        const username = isim.toLowerCase().replace(/\s+/g, '_');
+        const checkUser = await pool.query('SELECT username FROM users WHERE username = $1', [username]);
+        if (checkUser.rows.length === 0) {
+          // Listedeki kullanıcılar için özel password_hash (şifre yok, sadece listeden seçim)
+          const listPasswordHash = await bcrypt.hash('LIST_USER_' + username, 10);
+          await pool.query(
+            `INSERT INTO users (username, password_hash, full_name, status, approved_at, approved_by)
+             VALUES ($1, $2, $3, $4, NOW(), 'system')`,
+            [username, listPasswordHash, isim, 'approved']
+          );
+        }
+      }
+      console.log(`isimler.txt'den ${isimler.length} kullanıcı veritabanına kaydedildi`);
+    }
+  } catch (err) {
+    console.warn('isimler.txt yüklenirken hata:', err.message);
   }
 
   await pool.query(`
@@ -175,6 +205,106 @@ app.post('/api/signup', async (req, res) => {
   } catch (err) {
     console.error('POST /api/signup error', err);
     res.status(500).json({ error: 'Kayıt yapılamadı' });
+  }
+});
+
+// Listedeki kullanıcıları getir
+app.get('/api/list-users', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  try {
+    // isimler.txt'den kullanıcıları oku
+    const isimlerPath = path.join(__dirname, 'isimler.txt');
+    if (!fs.existsSync(isimlerPath)) {
+      return res.json([]);
+    }
+    
+    const isimlerContent = fs.readFileSync(isimlerPath, 'utf-8');
+    const isimler = isimlerContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+    
+    // Veritabanından bu kullanıcıları getir
+    const listUsers = [];
+    for (const isim of isimler) {
+      const username = isim.toLowerCase().replace(/\s+/g, '_');
+      const result = await pool.query(
+        'SELECT username, full_name FROM users WHERE username = $1 AND status = $2',
+        [username, 'approved']
+      );
+      if (result.rows.length > 0) {
+        listUsers.push({
+          username: result.rows[0].username,
+          fullName: result.rows[0].full_name || isim
+        });
+      }
+    }
+    
+    res.json(listUsers);
+  } catch (err) {
+    console.error('GET /api/list-users error', err);
+    res.status(500).json({ error: 'Liste kullanıcıları alınamadı' });
+  }
+});
+
+// Listedeki kullanıcılar için giriş (şifre gerektirmez)
+app.post('/api/login-list', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  const { username } = req.body || {};
+  
+  if (!username) {
+    return res.status(400).json({ error: 'Kullanıcı adı gerekli' });
+  }
+  
+  const cleanUsername = username.trim().toLowerCase();
+  
+  try {
+    // isimler.txt'den kontrol et
+    const isimlerPath = path.join(__dirname, 'isimler.txt');
+    if (!fs.existsSync(isimlerPath)) {
+      return res.status(404).json({ error: 'Liste dosyası bulunamadı' });
+    }
+    
+    const isimlerContent = fs.readFileSync(isimlerPath, 'utf-8');
+    const isimler = isimlerContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+    
+    // Kullanıcı adını isimler.txt'deki bir isimle eşleştir
+    const matchedName = isimler.find(isim => 
+      isim.toLowerCase().replace(/\s+/g, '_') === cleanUsername
+    );
+    
+    if (!matchedName) {
+      return res.status(401).json({ error: 'Bu kullanıcı listede bulunamadı' });
+    }
+    
+    // Veritabanından kullanıcıyı getir
+    const result = await pool.query(
+      'SELECT username, full_name, status FROM users WHERE username = $1',
+      [cleanUsername]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Kullanıcı bulunamadı' });
+    }
+    
+    const user = result.rows[0];
+    
+    if (user.status !== 'approved') {
+      return res.status(403).json({ error: 'Kullanıcı onaylanmamış' });
+    }
+    
+    res.json({
+      ok: true,
+      username: user.username,
+      fullName: user.full_name,
+      userType: 'user',
+    });
+  } catch (err) {
+    console.error('POST /api/login-list error', err);
+    res.status(500).json({ error: 'Giriş yapılamadı' });
   }
 });
 

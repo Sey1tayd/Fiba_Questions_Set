@@ -49,6 +49,44 @@
             text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.2);
         }
 
+        .login-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #DEB887;
+        }
+
+        .login-tab {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #654321;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-tab.active {
+            color: #8B4513;
+            border-bottom-color: #8B4513;
+            font-weight: bold;
+        }
+
+        .login-tab:hover {
+            color: #8B4513;
+        }
+
+        .login-form {
+            display: none;
+        }
+
+        .login-form.active {
+            display: block;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -61,7 +99,8 @@
             font-size: 1.1em;
         }
 
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid #DEB887;
@@ -72,7 +111,8 @@
             transition: all 0.3s ease;
         }
 
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: #8B4513;
             box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
@@ -141,7 +181,27 @@
             <p style="color: #654321;">Giriş Yapın</p>
         </div>
 
-        <form id="loginForm">
+        <div class="login-tabs">
+            <button class="login-tab active" data-tab="list">Listeden Seç</button>
+            <button class="login-tab" data-tab="password">Kullanıcı Adı ve Şifre</button>
+        </div>
+
+        <!-- Listeden Seçim Formu -->
+        <form id="listLoginForm" class="login-form active">
+            <div class="form-group">
+                <label for="listUserSelect">İsim Seçin:</label>
+                <select id="listUserSelect" name="username" required>
+                    <option value="">-- Seçin --</option>
+                </select>
+            </div>
+
+            <div class="error-message" id="listErrorMessage"></div>
+
+            <button type="submit" class="login-btn" id="listLoginBtn">Giriş Yap</button>
+        </form>
+
+        <!-- Kullanıcı Adı ve Şifre Formu -->
+        <form id="passwordLoginForm" class="login-form">
             <div class="form-group">
                 <label for="username">Kullanıcı Adı:</label>
                 <input type="text" id="username" name="username" placeholder="Kullanıcı adınızı girin" required>
@@ -152,9 +212,9 @@
                 <input type="password" id="password" name="password" placeholder="Şifrenizi girin" required>
             </div>
 
-            <div class="error-message" id="errorMessage"></div>
+            <div class="error-message" id="passwordErrorMessage"></div>
 
-            <button type="submit" class="login-btn" id="loginBtn">Giriş Yap</button>
+            <button type="submit" class="login-btn" id="passwordLoginBtn">Giriş Yap</button>
         </form>
 
         <div class="signup-link">
@@ -163,11 +223,107 @@
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        // Tab değiştirme
+        document.querySelectorAll('.login-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                
+                // Tab aktif durumunu güncelle
+                document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Form görünürlüğünü güncelle
+                document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
+                if (tabName === 'list') {
+                    document.getElementById('listLoginForm').classList.add('active');
+                } else {
+                    document.getElementById('passwordLoginForm').classList.add('active');
+                }
+                
+                // Hata mesajlarını temizle
+                document.getElementById('listErrorMessage').classList.remove('show');
+                document.getElementById('passwordErrorMessage').classList.remove('show');
+            });
+        });
+
+        // Listedeki kullanıcıları yükle
+        async function loadListUsers() {
+            try {
+                const response = await fetch('/api/list-users');
+                if (!response.ok) throw new Error('Liste yüklenemedi');
+                const users = await response.json();
+                
+                const select = document.getElementById('listUserSelect');
+                select.innerHTML = '<option value="">-- Seçin --</option>';
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.username;
+                    option.textContent = user.fullName || user.username;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Liste kullanıcıları yüklenirken hata:', error);
+                document.getElementById('listErrorMessage').textContent = 'Liste yüklenemedi';
+                document.getElementById('listErrorMessage').classList.add('show');
+            }
+        }
+
+        // Listeden seçim ile giriş
+        document.getElementById('listLoginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const errorMsg = document.getElementById('errorMessage');
-            const loginBtn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('listErrorMessage');
+            const loginBtn = document.getElementById('listLoginBtn');
+            const username = document.getElementById('listUserSelect').value;
+            
+            errorMsg.classList.remove('show');
+            
+            if (!username) {
+                errorMsg.textContent = 'Lütfen bir isim seçin';
+                errorMsg.classList.add('show');
+                return;
+            }
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Giriş yapılıyor...';
+            
+            try {
+                const response = await fetch('/api/login-list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Giriş yapılamadı');
+                }
+                
+                // Başarılı giriş
+                localStorage.setItem('currentUser', data.username);
+                localStorage.setItem('userType', data.userType);
+                if (data.fullName) {
+                    localStorage.setItem('fullName', data.fullName);
+                }
+                
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                errorMsg.textContent = error.message || 'Bir hata oluştu';
+                errorMsg.classList.add('show');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Giriş Yap';
+            }
+        });
+
+        // Kullanıcı adı ve şifre ile giriş
+        document.getElementById('passwordLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const errorMsg = document.getElementById('passwordErrorMessage');
+            const loginBtn = document.getElementById('passwordLoginBtn');
             
             errorMsg.classList.remove('show');
             
@@ -218,6 +374,9 @@
                 loginBtn.textContent = 'Giriş Yap';
             }
         });
+
+        // Sayfa yüklendiğinde listedeki kullanıcıları yükle
+        loadListUsers();
     </script>
 </body>
 </html>
