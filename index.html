@@ -1353,9 +1353,28 @@
             if (checkedData && checkedData.checked) {
                 // Soru daha önce kontrol edilmiş, kontrol edilmiş durumda göster
                 questionChecked = true;
-                // Kaydedilmiş cevabı yükle (displayAnswer)
-                const savedAnswer = loadAnswer(index);
-                selectedAnswer = savedAnswer || checkedData.selectedAnswer;
+                
+                // Kaydedilmiş cevabı yükle - originalSik kullanarak yeni sıradaki şık'ı bul
+                const key = getAnswersKey();
+                const answers = JSON.parse(localStorage.getItem(key) || '{}');
+                const savedAnswerData = answers[index];
+                
+                let foundDisplaySik = null;
+                if (savedAnswerData && savedAnswerData.originalSik) {
+                    // Orijinal şık harfini kullanarak yeni karıştırılmış sıradaki şık'ı bul
+                    const savedOriginalSik = savedAnswerData.originalSik;
+                    
+                    // optionMapping'de ters arama yap (orijinal -> display)
+                    for (const [displaySik, originalSik] of Object.entries(optionMapping)) {
+                        if (originalSik === savedOriginalSik) {
+                            foundDisplaySik = displaySik;
+                            break;
+                        }
+                    }
+                }
+                
+                // Eğer bulunamazsa, eski displayAnswer'ı kullan (geriye dönük uyumluluk)
+                selectedAnswer = foundDisplaySik || checkedData.selectedAnswer;
                 
                 // Şıkları renklendir
                 document.querySelectorAll('.option').forEach(opt => {
@@ -1384,17 +1403,34 @@
                 questionChecked = false;
                 
                 // Kaydedilmiş cevabı yükle
-                const savedAnswer = loadAnswer(index);
-                if (savedAnswer) {
-                    selectedAnswer = savedAnswer;
-                    document.querySelectorAll('.option').forEach(opt => {
-                        if (opt.dataset.sik === savedAnswer) {
-                            opt.classList.add('selected');
+                const key = getAnswersKey();
+                const answers = JSON.parse(localStorage.getItem(key) || '{}');
+                const savedAnswerData = answers[index];
+                
+                if (savedAnswerData && savedAnswerData.originalSik) {
+                    // Orijinal şık harfini kullanarak yeni karıştırılmış sıradaki şık'ı bul
+                    const savedOriginalSik = savedAnswerData.originalSik;
+                    let foundDisplaySik = null;
+                    
+                    // optionMapping'de ters arama yap (orijinal -> display)
+                    for (const [displaySik, originalSik] of Object.entries(optionMapping)) {
+                        if (originalSik === savedOriginalSik) {
+                            foundDisplaySik = displaySik;
+                            break;
                         }
-                    });
-                    const checkBtn = document.getElementById('checkBtn');
-                    checkBtn.disabled = false;
-                    checkBtn.classList.add('enabled');
+                    }
+                    
+                    if (foundDisplaySik) {
+                        selectedAnswer = foundDisplaySik;
+                        document.querySelectorAll('.option').forEach(opt => {
+                            if (opt.dataset.sik === foundDisplaySik) {
+                                opt.classList.add('selected');
+                            }
+                        });
+                        const checkBtn = document.getElementById('checkBtn');
+                        checkBtn.disabled = false;
+                        checkBtn.classList.add('enabled');
+                    }
                 }
 
                 // Açıklama kutusunu gizle
