@@ -32,6 +32,23 @@ async function initDb() {
     );
   `);
 
+  // Migration: tests_completed kolonunu ekle (eğer yoksa)
+  try {
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'user_stats' AND column_name = 'tests_completed'
+        ) THEN
+          ALTER TABLE user_stats ADD COLUMN tests_completed INTEGER NOT NULL DEFAULT 0;
+        END IF;
+      END $$;
+    `);
+  } catch (err) {
+    console.warn('Migration hatası (tests_completed):', err.message);
+  }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_question_stats (
       user_name TEXT NOT NULL,
