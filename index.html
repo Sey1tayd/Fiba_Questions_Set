@@ -1034,16 +1034,29 @@
             } else {
                 stats.incorrect++;
             }
-            await saveUserStats(stats);
 
-            // Soru bazında deneme kaydet (admin detayları için)
-            logAttempt({
-                user: currentUser,
-                questionIndex: currentQuestionIndex + 1, // 1-based (admin'de daha anlaşılır)
-                selected: selectedOriginalSik,
-                correct: soru.dogru_sik,
-                isCorrect
-            });
+            // Ekrandaki istatistikleri anında güncelle
+            document.getElementById('correctCount').textContent = stats.correct;
+            document.getElementById('incorrectCount').textContent = stats.incorrect;
+            document.getElementById('totalAnswered').textContent = stats.total;
+
+            // Veritabanına anında kaydet (test bitmesini beklemeden)
+            try {
+                // Genel istatistikleri kaydet
+                await saveUserStats(stats);
+                
+                // Soru bazında deneme kaydet (admin detayları için)
+                await logAttempt({
+                    user: currentUser,
+                    questionIndex: currentQuestionIndex + 1, // 1-based (admin'de daha anlaşılır)
+                    selected: selectedOriginalSik,
+                    correct: soru.dogru_sik,
+                    isCorrect
+                });
+            } catch (error) {
+                console.error('İstatistik kaydetme hatası:', error);
+                // Hata olsa bile kullanıcıya göster, ama devam et
+            }
 
             // Şıkları renklendir
             document.querySelectorAll('.option').forEach(opt => {
@@ -1083,10 +1096,7 @@
             explanationBox.innerHTML = explanationHTML;
             explanationBox.style.display = 'block';
 
-            document.getElementById('correctCount').textContent = stats.correct;
-            document.getElementById('incorrectCount').textContent = stats.incorrect;
-            document.getElementById('totalAnswered').textContent = stats.total;
-
+            // İstatistikler zaten yukarıda güncellendi ve kaydedildi
             document.getElementById('checkBtn').style.display = 'none';
             document.getElementById('nextBtn').style.display = 'block';
         }
