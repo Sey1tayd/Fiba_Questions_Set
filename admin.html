@@ -135,6 +135,61 @@
             font-weight: bold;
             color: #654321;
         }
+
+        .details-panel {
+            margin-top: 25px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #DEB887;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .details-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .details-header select {
+            padding: 10px 12px;
+            border: 2px solid #DEB887;
+            border-radius: 8px;
+            font-size: 1em;
+            color: #654321;
+            background: rgba(255, 255, 255, 0.95);
+            min-width: 240px;
+        }
+
+        .mini-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            color: #654321;
+            font-weight: 600;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .details-table thead {
+            background: rgba(222, 184, 135, 0.35);
+            color: #654321;
+        }
+        .details-table th, .details-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(222, 184, 135, 0.35);
+        }
+        .details-table tbody tr:last-child td {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -181,6 +236,19 @@
                 </tr>
             </tbody>
         </table>
+
+        <div class="details-panel">
+            <div class="details-header">
+                <div style="font-weight: 800; color:#8B4513;">Kullanıcı Detayı</div>
+                <select id="userSelect">
+                    <option value="">-- Kullanıcı seçin --</option>
+                </select>
+                <div class="mini-stats" id="userMiniStats"></div>
+            </div>
+            <div id="userDetailsContent">
+                <div class="no-data">Detay görmek için kullanıcı seçin.</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -197,6 +265,77 @@
             const res = await fetch('/api/stats');
             if (!res.ok) throw new Error('API yanıtı başarısız');
             return res.json();
+        }
+
+        async function fetchUserDetails(username) {
+            const res = await fetch(`/api/admin/user/${encodeURIComponent(username)}/details`);
+            if (!res.ok) throw new Error('Detay API yanıtı başarısız');
+            return res.json();
+        }
+
+        function setUserSelectOptions(users) {
+            const select = document.getElementById('userSelect');
+            const current = select.value;
+            select.innerHTML = '<option value="">-- Kullanıcı seçin --</option>';
+            users.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.user_name;
+                opt.textContent = u.user_name;
+                select.appendChild(opt);
+            });
+            if (current) select.value = current;
+        }
+
+        function renderUserDetails(details) {
+            const mini = document.getElementById('userMiniStats');
+            const content = document.getElementById('userDetailsContent');
+            const s = details.summary || {};
+            const testsCompleted = s.tests_completed || 0;
+            mini.innerHTML = `
+                <span>Test: <strong>${testsCompleted}</strong></span>
+                <span>Toplam: <strong>${s.total || 0}</strong></span>
+                <span>Doğru: <strong style="color:#2d8659">${s.correct || 0}</strong></span>
+                <span>Yanlış: <strong style="color:#d32f2f">${s.incorrect || 0}</strong></span>
+            `;
+
+            const rows = Array.isArray(details.perQuestion) ? details.perQuestion : [];
+            if (rows.length === 0) {
+                content.innerHTML = '<div class="no-data">Bu kullanıcı için soru bazlı kayıt yok.</div>';
+                return;
+            }
+
+            // En çok yanlış yapılanları üstte (API zaten öyle sıralıyor)
+            let html = `
+                <table class="details-table">
+                    <thead>
+                        <tr>
+                            <th>Soru #</th>
+                            <th>Deneme</th>
+                            <th>Yanlış</th>
+                            <th>Doğru</th>
+                            <th>Son Seçim</th>
+                            <th>Doğru Şık</th>
+                            <th>Sonuç</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            rows.forEach(r => {
+                const lastResult = r.last_is_correct === true ? 'Doğru' : (r.last_is_correct === false ? 'Yanlış' : '-');
+                html += `
+                    <tr>
+                        <td>${r.question_index}</td>
+                        <td>${r.attempts}</td>
+                        <td style="color:#d32f2f; font-weight:700">${r.wrong_count}</td>
+                        <td style="color:#2d8659; font-weight:700">${r.correct_count}</td>
+                        <td>${r.last_selected || '-'}</td>
+                        <td>${r.last_correct || '-'}</td>
+                        <td>${lastResult}</td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+            content.innerHTML = html;
         }
 
         async function loadStatistics() {
@@ -241,6 +380,9 @@
                     `;
                     tableBody.appendChild(tr);
                 });
+
+                // Kullanıcı dropdown
+                setUserSelectOptions(data);
             } catch (err) {
                 console.error('İstatistik yükleme hatası', err);
                 tableBody.innerHTML = '<tr><td colspan="5" class="no-data">İstatistik alınamadı</td></tr>';
@@ -249,6 +391,26 @@
 
         loadStatistics();
         setInterval(loadStatistics, 5000);
+
+        document.getElementById('userSelect').addEventListener('change', async (e) => {
+            const username = e.target.value;
+            const content = document.getElementById('userDetailsContent');
+            const mini = document.getElementById('userMiniStats');
+            if (!username) {
+                mini.innerHTML = '';
+                content.innerHTML = '<div class="no-data">Detay görmek için kullanıcı seçin.</div>';
+                return;
+            }
+            content.innerHTML = '<div class="no-data">Yükleniyor...</div>';
+            try {
+                const details = await fetchUserDetails(username);
+                renderUserDetails(details);
+            } catch (err) {
+                console.error('Detay yükleme hatası', err);
+                mini.innerHTML = '';
+                content.innerHTML = '<div class="no-data">Detay alınamadı.</div>';
+            }
+        });
     </script>
 </body>
 </html>

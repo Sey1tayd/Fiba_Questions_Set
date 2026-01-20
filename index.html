@@ -750,11 +750,12 @@
                 return {
                     correct: data.correct || 0,
                     incorrect: data.incorrect || 0,
-                    total: data.total || 0
+                    total: data.total || 0,
+                    tests_completed: data.tests_completed || 0
                 };
             } catch (e) {
                 console.error('İstatistik yüklenemedi, 0 ile devam ediliyor', e);
-                return { correct: 0, incorrect: 0, total: 0 };
+                return { correct: 0, incorrect: 0, total: 0, tests_completed: 0 };
             }
         }
         
@@ -767,11 +768,36 @@
                         user: currentUser,
                         correct: statsToSave.correct || 0,
                         incorrect: statsToSave.incorrect || 0,
-                        total: statsToSave.total || 0
+                        total: statsToSave.total || 0,
+                        tests_completed: statsToSave.tests_completed
                     })
                 });
             } catch (e) {
                 console.error('İstatistik kaydedilemedi', e);
+            }
+        }
+
+        async function logAttempt(payload) {
+            try {
+                await fetch('/api/attempt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) {
+                console.error('Attempt kaydedilemedi', e);
+            }
+        }
+
+        async function logSessionComplete() {
+            try {
+                await fetch('/api/sessionComplete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user: currentUser })
+                });
+            } catch (e) {
+                console.error('SessionComplete kaydedilemedi', e);
             }
         }
         
@@ -905,6 +931,11 @@
                 // Tüm sorular bitti
                 document.getElementById('questionContainer').innerHTML = 
                     '<div style="text-align: center; padding: 40px;"><h2>Tebrikler! Tüm soruları tamamladınız.</h2><p style="margin-top: 20px;">Doğru: ' + stats.correct + ' | Yanlış: ' + stats.incorrect + '</p></div>';
+                // Test tamamlandı say
+                if (typeof stats.tests_completed !== 'number') stats.tests_completed = 0;
+                stats.tests_completed++;
+                saveUserStats(stats);
+                logSessionComplete();
                 return;
             }
 
@@ -1004,6 +1035,15 @@
                 stats.incorrect++;
             }
             await saveUserStats(stats);
+
+            // Soru bazında deneme kaydet (admin detayları için)
+            logAttempt({
+                user: currentUser,
+                questionIndex: currentQuestionIndex + 1, // 1-based (admin'de daha anlaşılır)
+                selected: selectedOriginalSik,
+                correct: soru.dogru_sik,
+                isCorrect
+            });
 
             // Şıkları renklendir
             document.querySelectorAll('.option').forEach(opt => {
