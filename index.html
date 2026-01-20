@@ -377,6 +377,29 @@
             opacity: 0.6;
         }
 
+        .finish-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
+            min-height: 48px;
+            -webkit-tap-highlight-color: rgba(211, 47, 47, 0.3);
+        }
+
+        .finish-btn:hover {
+            background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);
+        }
+
         @media (max-width: 768px) {
             .next-btn {
                 padding: 12px;
@@ -678,6 +701,7 @@
 
             <button class="check-btn" id="checkBtn" disabled>Kontrol Et</button>
             <button class="next-btn" id="nextBtn" style="display: none;">Sonraki Soru</button>
+            <button class="finish-btn" id="finishBtn" style="display: none;">Testi Bitir</button>
         </div>
 
         <div class="stats">
@@ -799,6 +823,38 @@
             } catch (e) {
                 console.error('SessionComplete kaydedilemedi', e);
             }
+        }
+
+        // localStorage'a cevapları kaydet/yükle
+        function getAnswersKey() {
+            return `answers_${currentUser}`;
+        }
+
+        function saveAnswer(questionIndex, answer, originalSik) {
+            const key = getAnswersKey();
+            const answers = JSON.parse(localStorage.getItem(key) || '{}');
+            answers[questionIndex] = {
+                displayAnswer: answer, // A, B, C, D
+                originalSik: originalSik // Orijinal şık harfi (doğru cevabı kontrol için)
+            };
+            localStorage.setItem(key, JSON.stringify(answers));
+        }
+
+        function loadAnswer(questionIndex) {
+            const key = getAnswersKey();
+            const answers = JSON.parse(localStorage.getItem(key) || '{}');
+            const answer = answers[questionIndex];
+            return answer ? answer.displayAnswer : null;
+        }
+
+        function getAllAnswers() {
+            const key = getAnswersKey();
+            return JSON.parse(localStorage.getItem(key) || '{}');
+        }
+
+        function clearAnswers() {
+            const key = getAnswersKey();
+            localStorage.removeItem(key);
         }
         
         let currentShuffledOptions = []; // Karıştırılmış şıklar
@@ -992,23 +1048,43 @@
                 optionsContainer.appendChild(optionDiv);
             });
 
+            // Kaydedilmiş cevabı yükle
+            const savedAnswer = loadAnswer(index);
+            if (savedAnswer) {
+                selectedAnswer = savedAnswer;
+                document.querySelectorAll('.option').forEach(opt => {
+                    if (opt.dataset.sik === savedAnswer) {
+                        opt.classList.add('selected');
+                    }
+                });
+                const checkBtn = document.getElementById('checkBtn');
+                checkBtn.disabled = false;
+                checkBtn.classList.add('enabled');
+            }
+
             // Açıklama kutusunu gizle
             document.getElementById('explanationBox').style.display = 'none';
             document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('finishBtn').style.display = 'none';
             const checkBtn = document.getElementById('checkBtn');
             checkBtn.style.display = 'block';
-            checkBtn.disabled = true;
-            checkBtn.classList.remove('enabled');
+            if (!savedAnswer) {
+                checkBtn.disabled = true;
+                checkBtn.classList.remove('enabled');
+            }
             
-            // Şıkları sıfırla
+            // Şıkları sıfırla (sadece renklendirmeyi)
             document.querySelectorAll('.option').forEach(opt => {
-                opt.classList.remove('correct', 'incorrect', 'disabled', 'selected');
+                opt.classList.remove('correct', 'incorrect', 'disabled');
             });
         }
 
         function selectOption(sik) {
             if (questionChecked) return;
             selectedAnswer = sik;
+            // Cevabı kaydet (orijinal şık harfi ile birlikte)
+            const originalSik = optionMapping[sik];
+            saveAnswer(currentQuestionIndex, sik, originalSik);
             document.querySelectorAll('.option').forEach(opt => {
                 opt.classList.remove('selected');
                 if (opt.dataset.sik === sik) {
@@ -1099,15 +1175,150 @@
             // İstatistikler zaten yukarıda güncellendi ve kaydedildi
             document.getElementById('checkBtn').style.display = 'none';
             document.getElementById('nextBtn').style.display = 'block';
+            // Testi Bitir butonunu göster
+            document.getElementById('finishBtn').style.display = 'block';
         }
 
         function nextQuestion() {
             showQuestion(currentQuestionIndex + 1);
         }
 
+        async function finishTest() {
+            if (!confirm('Testi bitirmek istediğinize emin misiniz? Tüm cevaplar kontrol edilecek ve test tamamlanacak.')) {
+                return;
+            }
+
+            const allAnswers = getAllAnswers();
+            let correctCount = 0;
+            let incorrectCount = 0;
+            const wrongQuestions = [];
+
+            // Tüm cevapları kontrol et
+            for (let i = 0; i < sorular.length; i++) {
+                const soru = sorular[i];
+                const savedAnswerData = allAnswers[i];
+                
+                if (!savedAnswerData || !savedAnswerData.originalSik) {
+                    // Cevaplanmamış soru
+                    wrongQuestions.push({
+                        index: i + 1,
+                        question: soru.soru_metni.substring(0, 50) + '...',
+                        status: 'unanswered'
+                    });
+                    continue;
+                }
+
+                // Kaydedilmiş orijinal şık harfini kullanarak kontrol et
+                const selectedOriginalSik = savedAnswerData.originalSik;
+                const isCorrect = selectedOriginalSik === soru.dogru_sik;
+
+                if (isCorrect) {
+                    correctCount++;
+                } else {
+                    incorrectCount++;
+                    wrongQuestions.push({
+                        index: i + 1,
+                        question: soru.soru_metni.substring(0, 50) + '...',
+                        selected: savedAnswerData.displayAnswer,
+                        correct: soru.dogru_sik,
+                        status: 'wrong'
+                    });
+                }
+            }
+
+            // Son istatistikleri göster
+            const totalAnswered = Object.keys(allAnswers).length;
+            const finalStats = {
+                correct: correctCount,
+                incorrect: incorrectCount,
+                total: totalAnswered,
+                unanswered: sorular.length - totalAnswered
+            };
+
+            // İstatistikleri kaydet
+            stats.correct = correctCount;
+            stats.incorrect = incorrectCount;
+            stats.total = totalAnswered;
+            if (typeof stats.tests_completed !== 'number') stats.tests_completed = 0;
+            stats.tests_completed++;
+            
+            await saveUserStats(stats);
+            await logSessionComplete();
+
+            // Sonuç ekranı göster
+            let resultHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h2 style="color: #8B4513; margin-bottom: 20px;">Test Tamamlandı!</h2>
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 30px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="color: #654321; margin-bottom: 15px;">İstatistikler</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div>
+                                <div style="font-size: 2em; font-weight: bold; color: #2d8659;">${finalStats.correct}</div>
+                                <div style="color: #654321;">Doğru</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2em; font-weight: bold; color: #d32f2f;">${finalStats.incorrect}</div>
+                                <div style="color: #654321;">Yanlış</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2em; font-weight: bold; color: #654321;">${finalStats.unanswered}</div>
+                                <div style="color: #654321;">Cevaplanmadı</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2em; font-weight: bold; color: #8B4513;">${sorular.length}</div>
+                                <div style="color: #654321;">Toplam Soru</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 1.2em; color: #654321;">
+                            Başarı Oranı: <strong style="color: #8B4513;">${totalAnswered > 0 ? ((correctCount / totalAnswered) * 100).toFixed(1) : 0}%</strong>
+                        </div>
+                    </div>
+            `;
+
+            if (wrongQuestions.length > 0) {
+                resultHTML += `
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 15px; margin-top: 20px; text-align: left;">
+                        <h3 style="color: #d32f2f; margin-bottom: 15px;">Yanlış Cevaplanan Sorular (${wrongQuestions.length})</h3>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                `;
+                wrongQuestions.forEach(wq => {
+                    if (wq.status === 'wrong') {
+                        resultHTML += `
+                            <div style="padding: 10px; margin-bottom: 10px; background: rgba(255, 182, 193, 0.3); border-left: 4px solid #d32f2f; border-radius: 5px;">
+                                <strong>Soru ${wq.index}:</strong> ${wq.question}<br>
+                                <span style="color: #d32f2f;">Seçtiğiniz: ${wq.selected}</span> | 
+                                <span style="color: #2d8659;">Doğru: ${wq.correct}</span>
+                            </div>
+                        `;
+                    } else {
+                        resultHTML += `
+                            <div style="padding: 10px; margin-bottom: 10px; background: rgba(255, 245, 230, 0.5); border-left: 4px solid #CD853F; border-radius: 5px;">
+                                <strong>Soru ${wq.index}:</strong> ${wq.question}<br>
+                                <span style="color: #CD853F;">Cevaplanmadı</span>
+                            </div>
+                        `;
+                    }
+                });
+                resultHTML += `</div></div>`;
+            }
+
+            resultHTML += `
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 15px 30px; background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
+                        Yeni Teste Başla
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('questionContainer').innerHTML = resultHTML;
+
+            // Cevapları temizle
+            clearAnswers();
+        }
+
         // Event listeners
         document.getElementById('nextBtn').addEventListener('click', nextQuestion);
         document.getElementById('checkBtn').addEventListener('click', checkAnswer);
+        document.getElementById('finishBtn').addEventListener('click', finishTest);
 
         // Sayfa yüklendiğinde istatistikleri göster
         function updateStatsDisplay() {
