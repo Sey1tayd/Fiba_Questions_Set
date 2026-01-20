@@ -198,7 +198,13 @@ app.post('/api/signup', async (req, res) => {
     return res.status(400).json({ error: 'Şifre en az 6 karakter olmalı' });
   }
   
+  // Ad soyad zorunlu kontrolü
+  if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 2) {
+    return res.status(400).json({ error: 'Ad soyad zorunludur ve en az 2 karakter olmalıdır' });
+  }
+  
   const cleanUsername = username.trim().toLowerCase();
+  const cleanFullName = fullName.trim().toUpperCase(); // Büyük harfe çevir
   
   try {
     // Kullanıcı adı kontrolü
@@ -211,8 +217,30 @@ app.post('/api/signup', async (req, res) => {
     await pool.query(
       `INSERT INTO users (username, password_hash, full_name, email, status)
        VALUES ($1, $2, $3, $4, 'pending')`,
-      [cleanUsername, passwordHash, fullName || null, email || null]
+      [cleanUsername, passwordHash, cleanFullName, email || null]
     );
+    
+    // Ad soyadı isimler.txt dosyasına ekle
+    try {
+      const isimlerPath = path.join(__dirname, 'isimler.txt');
+      const isimlerContent = fs.existsSync(isimlerPath) 
+        ? fs.readFileSync(isimlerPath, 'utf-8') 
+        : '';
+      const isimler = isimlerContent
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+      
+      // Eğer isim listede yoksa ekle
+      if (!isimler.includes(cleanFullName)) {
+        isimler.push(cleanFullName);
+        fs.writeFileSync(isimlerPath, isimler.join('\n') + '\n', 'utf-8');
+        console.log(`Yeni kayıt: ${cleanFullName} isimler.txt dosyasına eklendi`);
+      }
+    } catch (fileErr) {
+      console.warn('isimler.txt dosyasına yazma hatası:', fileErr.message);
+      // Dosya hatası olsa bile kayıt başarılı sayılır
+    }
     
     res.json({ ok: true, message: 'Kayıt başarılı. Admin onayı bekleniyor.' });
   } catch (err) {
