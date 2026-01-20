@@ -901,9 +901,29 @@
         }
 
         function clearAnswers() {
+            // Sadece kontrol edilmemiş cevapları temizle
+            // "Biti" işaretli (kontrol edilmiş) cevapları koru
+            const key = getAnswersKey();
+            const checkedKey = getCheckedQuestionsKey();
+            const answers = JSON.parse(localStorage.getItem(key) || '{}');
+            const checked = JSON.parse(localStorage.getItem(checkedKey) || '{}');
+            
+            // Kontrol edilmemiş cevapları temizle
+            const newAnswers = {};
+            Object.keys(answers).forEach(questionIndex => {
+                if (checked[questionIndex] && checked[questionIndex].checked) {
+                    // Kontrol edilmiş soru, cevabını koru
+                    newAnswers[questionIndex] = answers[questionIndex];
+                }
+            });
+            
+            localStorage.setItem(key, JSON.stringify(newAnswers));
+        }
+        
+        function clearAllAnswers() {
+            // Tüm cevapları temizle (sadece gerektiğinde kullanılacak)
             const key = getAnswersKey();
             localStorage.removeItem(key);
-            clearCheckedQuestions();
         }
 
         // Kontrol edilmiş soruları kaydet/yükle
@@ -1213,8 +1233,9 @@
         // Yeni teste başla fonksiyonu (sayfa yenilenmeden)
         function startNewTest() {
             clearTestResult();
+            // Sadece kontrol edilmemiş cevapları temizle (kontrol edilmiş cevapları koru)
             clearAnswers();
-            clearCheckedQuestions();
+            // clearCheckedQuestions() çağrılmıyor - kontrol edilmiş sorular korunuyor
             clearLastQuestionIndex();
             // Aktif test istatistiklerini sıfırla
             clearCurrentTestStats();
@@ -1310,15 +1331,8 @@
 
         function showQuestion(index) {
             if (index >= sorular.length) {
-                // Tüm sorular bitti
-                document.getElementById('questionContainer').innerHTML = 
-                    '<div style="text-align: center; padding: 40px;"><h2>Tebrikler! Tüm soruları tamamladınız.</h2><p style="margin-top: 20px;">Doğru: ' + stats.correct + ' | Yanlış: ' + stats.incorrect + '</p></div>';
-                // Test tamamlandı say
-                if (typeof stats.tests_completed !== 'number') stats.tests_completed = 0;
-                stats.tests_completed++;
-                saveUserStats(stats);
-                logSessionComplete();
-                clearLastQuestionIndex(); // Test bitti, son soru index'ini temizle
+                // Tüm sorular bitti - finishTest() fonksiyonunu çağır
+                finishTest();
                 return;
             }
 
@@ -1579,13 +1593,37 @@
             }
 
             const allAnswers = getAllAnswers();
+            const checkedKey = getCheckedQuestionsKey();
+            const checkedQuestions = JSON.parse(localStorage.getItem(checkedKey) || '{}');
             let correctCount = 0;
             let incorrectCount = 0;
             const wrongQuestions = [];
 
-            // Tüm cevapları kontrol et
+            // Tüm cevapları kontrol et (hem kontrol edilmiş hem kontrol edilmemiş)
             for (let i = 0; i < sorular.length; i++) {
                 const soru = sorular[i];
+                const checkedData = checkedQuestions[i];
+                
+                // Önce kontrol edilmiş soru mu kontrol et
+                if (checkedData && checkedData.checked) {
+                    // Kontrol edilmiş soru - checkedQuestions'dan al
+                    const isCorrect = checkedData.isCorrect;
+                    if (isCorrect) {
+                        correctCount++;
+                    } else {
+                        incorrectCount++;
+                        wrongQuestions.push({
+                            index: i + 1,
+                            question: soru.soru_metni.substring(0, 50) + '...',
+                            selected: checkedData.selectedAnswer || '-',
+                            correct: checkedData.correctAnswer || soru.dogru_sik,
+                            status: 'wrong'
+                        });
+                    }
+                    continue;
+                }
+                
+                // Kontrol edilmemiş soru - answers'dan al
                 const savedAnswerData = allAnswers[i];
                 
                 if (!savedAnswerData || !savedAnswerData.originalSik) {
@@ -1617,7 +1655,8 @@
             }
 
             // Son istatistikleri göster
-            const totalAnswered = Object.keys(allAnswers).length;
+            // Hem kontrol edilmiş hem kontrol edilmemiş cevapları say
+            const totalAnswered = correctCount + incorrectCount;
             const finalStats = {
                 correct: correctCount,
                 incorrect: incorrectCount,
@@ -1657,9 +1696,9 @@
                 totalQuestions: sorular.length
             });
 
-            // Cevapları, kontrol edilmiş soruları ve aktif test istatistiklerini temizle
+            // Sadece kontrol edilmemiş cevapları temizle (kontrol edilmiş cevapları koru)
             clearAnswers();
-            clearCheckedQuestions();
+            // clearCheckedQuestions() çağrılmıyor - kontrol edilmiş sorular korunuyor
             clearCurrentTestStats();
             clearLastQuestionIndex(); // Test bitti, son soru index'ini temizle
             updateStatsDisplay();
