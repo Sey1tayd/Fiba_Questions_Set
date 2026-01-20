@@ -938,6 +938,32 @@
         let questionsByCategory = {}; // Başlıklara göre gruplandırılmış sorular
         let categoryIndexMap = {}; // Başlık -> soru indexleri eşleşmesi
 
+        // Açıklama kutusu oluşturma fonksiyonu (kod tekrarını önlemek için)
+        function buildExplanationHTML(soru) {
+            let explanationHTML = '<div class="explanation-title">Açıklama</div>';
+            
+            if (soru.baslik) {
+                explanationHTML += '<div class="explanation-section">';
+                explanationHTML += '<div class="explanation-section-label">Başlık:</div>';
+                explanationHTML += '<div class="explanation-section-content">' + soru.baslik + '</div>';
+                explanationHTML += '</div>';
+            }
+            if (soru.aciklama_metin) {
+                explanationHTML += '<div class="explanation-section">';
+                explanationHTML += '<div class="explanation-section-label">Açıklama Metni:</div>';
+                explanationHTML += '<div class="explanation-section-content">' + soru.aciklama_metin + '</div>';
+                explanationHTML += '</div>';
+            }
+            if (soru.yorum) {
+                explanationHTML += '<div class="explanation-section">';
+                explanationHTML += '<div class="explanation-section-label">Yorum:</div>';
+                explanationHTML += '<div class="explanation-section-content">' + soru.yorum + '</div>';
+                explanationHTML += '</div>';
+            }
+            
+            return explanationHTML;
+        }
+
         // Navigasyon paneli kontrolü
         const navToggle = document.getElementById('navToggle');
         const navPanel = document.getElementById('navPanel');
@@ -1129,9 +1155,7 @@
                 // Önce test sonucu var mı kontrol et
                 const testResult = loadTestResult();
                 if (testResult) {
-                    // Test sonucu varsa göster ve aktif test istatistiklerini temizle
-                    clearCurrentTestStats();
-                    updateStatsDisplay();
+                    // Test sonucu varsa göster (istatistikleri temizleme, sonuç ekranında gösterilecek)
                     showTestResult(testResult);
                     return;
                 }
@@ -1239,28 +1263,7 @@
                 
                 // Açıklama kutusunu göster
                 const explanationBox = document.getElementById('explanationBox');
-                let explanationHTML = '<div class="explanation-title">Açıklama</div>';
-                
-                if (soru.baslik) {
-                    explanationHTML += '<div class="explanation-section">';
-                    explanationHTML += '<div class="explanation-section-label">Başlık:</div>';
-                    explanationHTML += '<div class="explanation-section-content">' + soru.baslik + '</div>';
-                    explanationHTML += '</div>';
-                }
-                if (soru.aciklama_metin) {
-                    explanationHTML += '<div class="explanation-section">';
-                    explanationHTML += '<div class="explanation-section-label">Açıklama Metni:</div>';
-                    explanationHTML += '<div class="explanation-section-content">' + soru.aciklama_metin + '</div>';
-                    explanationHTML += '</div>';
-                }
-                if (soru.yorum) {
-                    explanationHTML += '<div class="explanation-section">';
-                    explanationHTML += '<div class="explanation-section-label">Yorum:</div>';
-                    explanationHTML += '<div class="explanation-section-content">' + soru.yorum + '</div>';
-                    explanationHTML += '</div>';
-                }
-                
-                explanationBox.innerHTML = explanationHTML;
+                explanationBox.innerHTML = buildExplanationHTML(soru);
                 explanationBox.style.display = 'block';
                 
                 // Butonları gizle/göster
@@ -1367,30 +1370,9 @@
                 }
             });
 
-            // Açıklama kutusunu oluştur ve göster
-            const explanationBox = document.getElementById('explanationBox');
-            let explanationHTML = '<div class="explanation-title">Açıklama</div>';
-            
-            if (soru.baslik) {
-                explanationHTML += '<div class="explanation-section">';
-                explanationHTML += '<div class="explanation-section-label">Başlık:</div>';
-                explanationHTML += '<div class="explanation-section-content">' + soru.baslik + '</div>';
-                explanationHTML += '</div>';
-            }
-            if (soru.aciklama_metin) {
-                explanationHTML += '<div class="explanation-section">';
-                explanationHTML += '<div class="explanation-section-label">Açıklama Metni:</div>';
-                explanationHTML += '<div class="explanation-section-content">' + soru.aciklama_metin + '</div>';
-                explanationHTML += '</div>';
-            }
-            if (soru.yorum) {
-                explanationHTML += '<div class="explanation-section">';
-                explanationHTML += '<div class="explanation-section-label">Yorum:</div>';
-                explanationHTML += '<div class="explanation-section-content">' + soru.yorum + '</div>';
-                explanationHTML += '</div>';
-            }
-
-            explanationBox.innerHTML = explanationHTML;
+                // Açıklama kutusunu oluştur ve göster
+                const explanationBox = document.getElementById('explanationBox');
+                explanationBox.innerHTML = buildExplanationHTML(soru);
             explanationBox.style.display = 'block';
 
             // Soruyu kontrol edilmiş olarak işaretle
@@ -1475,7 +1457,7 @@
             };
             
             await saveUserStats(newStats);
-            await logSessionComplete();
+            // logSessionComplete() çağrısı kaldırıldı - saveUserStats() zaten tests_completed'i artırıyor
 
             // Sonuçları kaydet
             saveTestResult({

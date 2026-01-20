@@ -125,6 +125,19 @@ async function initDb() {
       PRIMARY KEY (user_name, question_index)
     );
   `);
+
+  // Kullanıcı oturum cevapları (test bitene kadar saklanır)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_session_answers (
+      user_name TEXT NOT NULL,
+      question_index INTEGER NOT NULL,
+      selected_answer TEXT,
+      is_checked BOOLEAN NOT NULL DEFAULT FALSE,
+      is_correct BOOLEAN,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_name, question_index)
+    );
+  `);
 }
 
 // Statik dosyaları serve et (HTML, CSS, JS, JSON, resimler, txt)
@@ -356,8 +369,37 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Admin middleware - admin kontrolü
+async function requireAdmin(req, res, next) {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  
+  // Admin kullanıcı adını header'dan al
+  const adminUsername = req.headers['x-admin-user'];
+  
+  if (!adminUsername) {
+    return res.status(403).json({ error: 'Admin yetkisi gerekli - kullanıcı bilgisi eksik' });
+  }
+  
+  try {
+    // Veritabanından admin kontrolü yap (username = 'admin' olmalı)
+    const result = await pool.query(
+      'SELECT username FROM users WHERE username = $1',
+      [adminUsername]
+    );
+    
+    if (result.rows.length === 0 || adminUsername !== 'admin') {
+      return res.status(403).json({ error: 'Admin yetkisi gerekli' });
+    }
+    
+    next();
+  } catch (err) {
+    console.error('Admin kontrolü hatası:', err);
+    return res.status(500).json({ error: 'Admin kontrolü yapılamadı' });
+  }
+}
+
 // Admin: Bekleyen kullanıcıları listele
-app.get('/api/admin/pending-users', async (req, res) => {
+app.get('/api/admin/pending-users', requireAdmin, async (req, res) => {
   if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
   try {
     const result = await pool.query(
@@ -374,7 +416,7 @@ app.get('/api/admin/pending-users', async (req, res) => {
 });
 
 // Admin: Kullanıcı onayla/reddet
-app.post('/api/admin/approve-user', async (req, res) => {
+app.post('/api/admin/approve-user', requireAdmin, async (req, res) => {
   if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
   const { username, action, approvedBy } = req.body || {}; // action: 'approve' veya 'reject'
   
@@ -423,7 +465,8 @@ app.get('/api/stats/:user', async (req, res) => {
   }
 });
 
-app.get('/api/stats', async (_req, res) => {
+// Tüm kullanıcı istatistikleri (admin için)
+app.get('/api/stats', requireAdmin, async (_req, res) => {
   if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
   try {
     const result = await pool.query(
@@ -527,8 +570,74 @@ app.post('/api/sessionComplete', async (req, res) => {
   }
 });
 
+// --- API: Oturum yönetimi (test bitene kadar cevapları sakla) ---
+app.get('/api/session/answers', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  const user = req.query.user;
+  if (!user) return res.status(400).json({ error: 'user gerekli' });
+  
+  try {
+    const result = await pool.query(
+      'SELECT question_index, selected_answer, is_checked, is_correct FROM user_session_answers WHERE user_name = $1 ORDER BY question_index ASC',
+      [user]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('GET /api/session/answers error', err);
+    res.status(500).json({ error: 'Oturum cevapları alınamadı' });
+  }
+});
+
+app.post('/api/session/answer', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  const { user, questionIndex, selectedAnswer, isChecked, isCorrect } = req.body || {};
+  
+  if (!user || typeof questionIndex !== 'number') {
+    return res.status(400).json({ error: 'user ve questionIndex gerekli' });
+  }
+  
+  try {
+    await pool.query(
+      `INSERT INTO user_session_answers (user_name, question_index, selected_answer, is_checked, is_correct, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (user_name, question_index)
+       DO UPDATE SET selected_answer = $3, is_checked = $4, is_correct = $5, updated_at = NOW()`,
+      [user, questionIndex, selectedAnswer || null, isChecked || false, isCorrect || null]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /api/session/answer error', err);
+    res.status(500).json({ error: 'Cevap kaydedilemedi' });
+  }
+});
+
+app.post('/api/session/finish', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  const { user } = req.body || {};
+  if (!user) return res.status(400).json({ error: 'user gerekli' });
+  
+  try {
+    // Oturum cevaplarını getir
+    const sessionAnswers = await pool.query(
+      'SELECT question_index, selected_answer, is_checked, is_correct FROM user_session_answers WHERE user_name = $1 ORDER BY question_index ASC',
+      [user]
+    );
+    
+    // Oturum cevaplarını sil (test bitti)
+    await pool.query('DELETE FROM user_session_answers WHERE user_name = $1', [user]);
+    
+    res.json({ 
+      ok: true, 
+      answers: sessionAnswers.rows 
+    });
+  } catch (err) {
+    console.error('POST /api/session/finish error', err);
+    res.status(500).json({ error: 'Test bitirilemedi' });
+  }
+});
+
 // Admin detay: kullanıcı bazında soru istatistikleri
-app.get('/api/admin/user/:user/details', async (req, res) => {
+app.get('/api/admin/user/:user/details', requireAdmin, async (req, res) => {
   if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
   const user = req.params.user;
   try {

@@ -272,22 +272,37 @@
             window.location.href = 'login.html';
         }
 
+        // Admin header'ı ekleyen helper fonksiyon
+        function getAdminHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'x-admin-user': currentUser || 'admin'
+            };
+        }
+
         async function fetchAllStats() {
-            const res = await fetch('/api/stats');
+            const res = await fetch('/api/stats', {
+                headers: getAdminHeaders()
+            });
             if (!res.ok) throw new Error('API yanıtı başarısız');
             return res.json();
         }
 
         async function fetchPendingUsers() {
-            const res = await fetch('/api/admin/pending-users');
-            if (!res.ok) throw new Error('Bekleyen kullanıcılar alınamadı');
+            const res = await fetch('/api/admin/pending-users', {
+                headers: getAdminHeaders()
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Bekleyen kullanıcılar alınamadı');
+            }
             return res.json();
         }
 
         async function approveUser(username, action) {
             const res = await fetch('/api/admin/approve-user', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAdminHeaders(),
                 body: JSON.stringify({ username, action, approvedBy: currentUser })
             });
             if (!res.ok) {
@@ -358,8 +373,13 @@
         window.handleApprove = handleApprove;
 
         async function fetchUserDetails(username) {
-            const res = await fetch(`/api/admin/user/${encodeURIComponent(username)}/details`);
-            if (!res.ok) throw new Error('Detay API yanıtı başarısız');
+            const res = await fetch(`/api/admin/user/${encodeURIComponent(username)}/details`, {
+                headers: getAdminHeaders()
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Detay API yanıtı başarısız');
+            }
             return res.json();
         }
 
