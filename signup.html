@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TBF Resmi Yorumlar - Giriş</title>
+    <title>TBF Resmi Yorumlar - Kayıt Ol</title>
     <style>
         * {
             margin: 0;
@@ -25,7 +25,7 @@
             padding: 20px;
         }
 
-        .login-container {
+        .signup-container {
             background: rgba(255, 248, 220, 0.95);
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(139, 69, 19, 0.4);
@@ -35,14 +35,14 @@
             border: 2px solid rgba(222, 184, 135, 0.5);
         }
 
-        .login-header {
+        .signup-header {
             text-align: center;
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 3px solid #8B4513;
         }
 
-        .login-header h1 {
+        .signup-header h1 {
             color: #8B4513;
             font-size: 2em;
             margin-bottom: 10px;
@@ -78,7 +78,7 @@
             box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
         }
 
-        .login-btn {
+        .signup-btn {
             width: 100%;
             padding: 15px;
             background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%);
@@ -93,13 +93,13 @@
             box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
         }
 
-        .login-btn:hover {
+        .signup-btn:hover {
             background: linear-gradient(135deg, #D2691E 0%, #A0522D 100%);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
         }
 
-        .login-btn:disabled {
+        .signup-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
@@ -117,105 +117,135 @@
             display: block;
         }
 
-        .signup-link {
+        .success-message {
+            color: #2d8659;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .login-link {
             text-align: center;
             margin-top: 20px;
             color: #654321;
         }
 
-        .signup-link a {
+        .login-link a {
             color: #8B4513;
             text-decoration: none;
             font-weight: bold;
         }
 
-        .signup-link a:hover {
+        .login-link a:hover {
             text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-header">
+    <div class="signup-container">
+        <div class="signup-header">
             <h1>TBF Resmi Yorumlar</h1>
-            <p style="color: #654321;">Giriş Yapın</p>
+            <p style="color: #654321;">Yeni Hesap Oluştur</p>
         </div>
 
-        <form id="loginForm">
+        <form id="signupForm">
             <div class="form-group">
                 <label for="username">Kullanıcı Adı:</label>
-                <input type="text" id="username" name="username" placeholder="Kullanıcı adınızı girin" required>
+                <input type="text" id="username" name="username" placeholder="En az 3 karakter" required minlength="3">
             </div>
 
             <div class="form-group">
                 <label for="password">Şifre:</label>
-                <input type="password" id="password" name="password" placeholder="Şifrenizi girin" required>
+                <input type="password" id="password" name="password" placeholder="En az 6 karakter" required minlength="6">
+            </div>
+
+            <div class="form-group">
+                <label for="fullName">Ad Soyad (Opsiyonel):</label>
+                <input type="text" id="fullName" name="fullName" placeholder="Adınız ve soyadınız">
+            </div>
+
+            <div class="form-group">
+                <label for="email">E-posta (Opsiyonel):</label>
+                <input type="email" id="email" name="email" placeholder="ornek@email.com">
             </div>
 
             <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
 
-            <button type="submit" class="login-btn" id="loginBtn">Giriş Yap</button>
+            <button type="submit" class="signup-btn" id="signupBtn">Kayıt Ol</button>
         </form>
 
-        <div class="signup-link">
-            Hesabınız yok mu? <a href="signup.html">Kayıt Ol</a>
+        <div class="login-link">
+            Zaten hesabınız var mı? <a href="login.html">Giriş Yap</a>
         </div>
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const errorMsg = document.getElementById('errorMessage');
-            const loginBtn = document.getElementById('loginBtn');
+            const successMsg = document.getElementById('successMessage');
+            const signupBtn = document.getElementById('signupBtn');
             
             errorMsg.classList.remove('show');
+            successMsg.classList.remove('show');
             
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('email').value.trim();
             
-            if (!username || !password) {
-                errorMsg.textContent = 'Lütfen kullanıcı adı ve şifre girin';
+            if (username.length < 3) {
+                errorMsg.textContent = 'Kullanıcı adı en az 3 karakter olmalı';
                 errorMsg.classList.add('show');
                 return;
             }
             
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Giriş yapılıyor...';
+            if (password.length < 6) {
+                errorMsg.textContent = 'Şifre en az 6 karakter olmalı';
+                errorMsg.classList.add('show');
+                return;
+            }
+            
+            signupBtn.disabled = true;
+            signupBtn.textContent = 'Kaydediliyor...';
             
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch('/api/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, fullName, email })
                 });
                 
                 const data = await response.json();
                 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Giriş yapılamadı');
+                    throw new Error(data.error || 'Kayıt yapılamadı');
                 }
                 
-                // Başarılı giriş
-                localStorage.setItem('currentUser', data.username);
-                localStorage.setItem('userType', data.userType);
-                if (data.fullName) {
-                    localStorage.setItem('fullName', data.fullName);
-                }
+                successMsg.textContent = data.message || 'Kayıt başarılı! Admin onayı bekleniyor.';
+                successMsg.classList.add('show');
                 
-                // Yönlendirme
-                if (data.userType === 'admin') {
-                    window.location.href = 'admin.html';
-                } else {
-                    window.location.href = 'index.html';
-                }
+                // Formu temizle
+                document.getElementById('signupForm').reset();
+                
+                // 3 saniye sonra login sayfasına yönlendir
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 3000);
                 
             } catch (error) {
                 errorMsg.textContent = error.message || 'Bir hata oluştu';
                 errorMsg.classList.add('show');
             } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Giriş Yap';
+                signupBtn.disabled = false;
+                signupBtn.textContent = 'Kayıt Ol';
             }
         });
     </script>

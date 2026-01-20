@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +22,37 @@ async function initDb() {
     console.warn('DATABASE_URL yok, DB bağlantısı yapılmadı.');
     return;
   }
+  
+  // Users table (kurumsal sistem için)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      username TEXT PRIMARY KEY,
+      password_hash TEXT NOT NULL,
+      full_name TEXT,
+      email TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      approved_at TIMESTAMPTZ,
+      approved_by TEXT
+    );
+  `);
+
+  // İlk admin kullanıcısını oluştur (eğer yoksa)
+  try {
+    const adminCheck = await pool.query('SELECT username FROM users WHERE username = $1', ['admin']);
+    if (adminCheck.rows.length === 0) {
+      const adminPasswordHash = await bcrypt.hash('admin123', 10);
+      await pool.query(
+        `INSERT INTO users (username, password_hash, full_name, status, approved_at, approved_by)
+         VALUES ($1, $2, $3, $4, NOW(), 'system')`,
+        ['admin', adminPasswordHash, 'Sistem Yöneticisi', 'approved']
+      );
+      console.log('İlk admin kullanıcısı oluşturuldu (username: admin, password: admin123)');
+    }
+  } catch (err) {
+    console.warn('Admin kullanıcısı oluşturulurken hata:', err.message);
+  }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_stats (
       user_name TEXT PRIMARY KEY,
@@ -85,6 +117,10 @@ app.get('/login.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
 });
 
+app.get('/signup.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'signup.html'));
+});
+
 app.get('/admin.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
@@ -105,6 +141,130 @@ app.get('/isimler.txt', (req, res) => {
 // Health check endpoint for Railway
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+// --- API: Kullanıcı Kayıt ve Giriş ---
+app.post('/api/signup', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  const { username, password, fullName, email } = req.body || {};
+  
+  if (!username || typeof username !== 'string' || username.trim().length < 3) {
+    return res.status(400).json({ error: 'Kullanıcı adı en az 3 karakter olmalı' });
+  }
+  if (!password || typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({ error: 'Şifre en az 6 karakter olmalı' });
+  }
+  
+  const cleanUsername = username.trim().toLowerCase();
+  
+  try {
+    // Kullanıcı adı kontrolü
+    const existing = await pool.query('SELECT username FROM users WHERE username = $1', [cleanUsername]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanılıyor' });
+    }
+    
+    const passwordHash = await bcrypt.hash(password, 10);
+    await pool.query(
+      `INSERT INTO users (username, password_hash, full_name, email, status)
+       VALUES ($1, $2, $3, $4, 'pending')`,
+      [cleanUsername, passwordHash, fullName || null, email || null]
+    );
+    
+    res.json({ ok: true, message: 'Kayıt başarılı. Admin onayı bekleniyor.' });
+  } catch (err) {
+    console.error('POST /api/signup error', err);
+    res.status(500).json({ error: 'Kayıt yapılamadı' });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  const { username, password } = req.body || {};
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Kullanıcı adı ve şifre gerekli' });
+  }
+  
+  const cleanUsername = username.trim().toLowerCase();
+  
+  try {
+    const result = await pool.query(
+      'SELECT username, password_hash, status, full_name FROM users WHERE username = $1',
+      [cleanUsername]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Kullanıcı adı veya şifre hatalı' });
+    }
+    
+    const user = result.rows[0];
+    
+    if (user.status === 'pending') {
+      return res.status(403).json({ error: 'Hesabınız henüz onaylanmadı. Lütfen admin onayı bekleyin.' });
+    }
+    
+    if (user.status === 'rejected') {
+      return res.status(403).json({ error: 'Hesabınız reddedildi. Lütfen admin ile iletişime geçin.' });
+    }
+    
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Kullanıcı adı veya şifre hatalı' });
+    }
+    
+    const isAdmin = cleanUsername === 'admin';
+    res.json({
+      ok: true,
+      username: user.username,
+      fullName: user.full_name,
+      userType: isAdmin ? 'admin' : 'user',
+    });
+  } catch (err) {
+    console.error('POST /api/login error', err);
+    res.status(500).json({ error: 'Giriş yapılamadı' });
+  }
+});
+
+// Admin: Bekleyen kullanıcıları listele
+app.get('/api/admin/pending-users', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  try {
+    const result = await pool.query(
+      `SELECT username, full_name, email, created_at 
+       FROM users 
+       WHERE status = 'pending' 
+       ORDER BY created_at ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('GET /api/admin/pending-users error', err);
+    res.status(500).json({ error: 'Bekleyen kullanıcılar alınamadı' });
+  }
+});
+
+// Admin: Kullanıcı onayla/reddet
+app.post('/api/admin/approve-user', async (req, res) => {
+  if (!pool) return res.status(500).json({ error: 'Database bağlantısı yok' });
+  const { username, action, approvedBy } = req.body || {}; // action: 'approve' veya 'reject'
+  
+  if (!username || !action || (action !== 'approve' && action !== 'reject')) {
+    return res.status(400).json({ error: 'Geçersiz istek' });
+  }
+  
+  try {
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    await pool.query(
+      `UPDATE users 
+       SET status = $1, approved_at = NOW(), approved_by = $2 
+       WHERE username = $3`,
+      [newStatus, approvedBy || 'admin', username]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /api/admin/approve-user error', err);
+    res.status(500).json({ error: 'İşlem yapılamadı' });
+  }
 });
 
 // --- API: Kullanıcı istatistikleri ---

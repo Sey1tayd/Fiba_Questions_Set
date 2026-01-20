@@ -198,7 +198,18 @@
     <div class="admin-container">
         <div class="admin-header">
             <h1>Admin Panel</h1>
-            <p style="color: #654321;">Kullanıcı İstatistikleri</p>
+            <p style="color: #654321;">Kullanıcı Yönetimi ve İstatistikleri</p>
+        </div>
+
+        <!-- Kullanıcı Onaylama Paneli -->
+        <div class="details-panel" style="margin-bottom: 30px;">
+            <div class="details-header">
+                <div style="font-weight: 800; color:#8B4513; font-size: 1.2em;">Bekleyen Kullanıcılar</div>
+                <button id="refreshPendingBtn" style="padding: 8px 16px; background: #8B4513; color: white; border: none; border-radius: 6px; cursor: pointer;">Yenile</button>
+            </div>
+            <div id="pendingUsersContent">
+                <div class="no-data">Yükleniyor...</div>
+            </div>
         </div>
 
         <div class="summary-stats" id="summaryStats">
@@ -266,6 +277,85 @@
             if (!res.ok) throw new Error('API yanıtı başarısız');
             return res.json();
         }
+
+        async function fetchPendingUsers() {
+            const res = await fetch('/api/admin/pending-users');
+            if (!res.ok) throw new Error('Bekleyen kullanıcılar alınamadı');
+            return res.json();
+        }
+
+        async function approveUser(username, action) {
+            const res = await fetch('/api/admin/approve-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, action, approvedBy: currentUser })
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'İşlem başarısız');
+            }
+            return res.json();
+        }
+
+        function renderPendingUsers(users) {
+            const content = document.getElementById('pendingUsersContent');
+            if (!Array.isArray(users) || users.length === 0) {
+                content.innerHTML = '<div class="no-data">Bekleyen kullanıcı yok.</div>';
+                return;
+            }
+
+            let html = '<table class="details-table"><thead><tr><th>Kullanıcı Adı</th><th>Ad Soyad</th><th>E-posta</th><th>Kayıt Tarihi</th><th>İşlem</th></tr></thead><tbody>';
+            users.forEach(user => {
+                const date = user.created_at ? new Date(user.created_at).toLocaleString('tr-TR') : '-';
+                html += `
+                    <tr>
+                        <td><strong>${user.username}</strong></td>
+                        <td>${user.full_name || '-'}</td>
+                        <td>${user.email || '-'}</td>
+                        <td>${date}</td>
+                        <td>
+                            <button onclick="handleApprove('${user.username}', 'approve')" 
+                                    style="padding: 6px 12px; background: #2d8659; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px;">
+                                Onayla
+                            </button>
+                            <button onclick="handleApprove('${user.username}', 'reject')" 
+                                    style="padding: 6px 12px; background: #d32f2f; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                Reddet
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+            content.innerHTML = html;
+        }
+
+        async function loadPendingUsers() {
+            const content = document.getElementById('pendingUsersContent');
+            content.innerHTML = '<div class="no-data">Yükleniyor...</div>';
+            try {
+                const users = await fetchPendingUsers();
+                renderPendingUsers(users);
+            } catch (err) {
+                console.error('Bekleyen kullanıcılar yükleme hatası', err);
+                content.innerHTML = '<div class="no-data">Bekleyen kullanıcılar alınamadı.</div>';
+            }
+        }
+
+        async function handleApprove(username, action) {
+            if (!confirm(`Bu kullanıcıyı ${action === 'approve' ? 'onaylamak' : 'reddetmek'} istediğinize emin misiniz?`)) {
+                return;
+            }
+            try {
+                await approveUser(username, action);
+                alert(`Kullanıcı ${action === 'approve' ? 'onaylandı' : 'reddedildi'}.`);
+                loadPendingUsers();
+            } catch (err) {
+                alert('Hata: ' + err.message);
+            }
+        }
+
+        window.handleApprove = handleApprove;
 
         async function fetchUserDetails(username) {
             const res = await fetch(`/api/admin/user/${encodeURIComponent(username)}/details`);
@@ -390,7 +480,11 @@
         }
 
         loadStatistics();
+        loadPendingUsers();
         setInterval(loadStatistics, 5000);
+        setInterval(loadPendingUsers, 10000); // Her 10 saniyede bir bekleyen kullanıcıları kontrol et
+
+        document.getElementById('refreshPendingBtn').addEventListener('click', loadPendingUsers);
 
         document.getElementById('userSelect').addEventListener('change', async (e) => {
             const username = e.target.value;
