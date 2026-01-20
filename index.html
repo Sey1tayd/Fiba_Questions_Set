@@ -17,18 +17,20 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-color: #f7efe1; /* Fallback renk (mobil tarayıcı çubukları için) */
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            padding: 10px;
+            padding: calc(10px + env(safe-area-inset-top, 0)) 10px calc(10px + env(safe-area-inset-bottom, 0)) 10px;
             overflow-x: hidden;
         }
 
         @media (max-width: 768px) {
             body {
                 background-attachment: scroll;
-                padding: 5px;
+                padding: calc(5px + env(safe-area-inset-top, 0)) 5px calc(5px + env(safe-area-inset-bottom, 0)) 5px;
+                min-height: 100dvh; /* iOS adres çubuğu yüksekliğine uyum */
             }
         }
 
@@ -348,6 +350,33 @@
             -webkit-tap-highlight-color: rgba(45, 134, 89, 0.3);
         }
 
+        .check-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #CD853F 0%, #8B4513 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+            min-height: 48px;
+            -webkit-tap-highlight-color: rgba(205, 133, 63, 0.3);
+            opacity: 0.8;
+        }
+
+        .check-btn.enabled {
+            opacity: 1;
+        }
+
+        .check-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
         @media (max-width: 768px) {
             .next-btn {
                 padding: 12px;
@@ -646,7 +675,8 @@
             <div class="options-container" id="optionsContainer"></div>
             
             <div class="explanation-box" id="explanationBox" style="display: none;"></div>
-            
+
+            <button class="check-btn" id="checkBtn" disabled>Kontrol Et</button>
             <button class="next-btn" id="nextBtn" style="display: none;">Sonraki Soru</button>
         </div>
 
@@ -708,6 +738,7 @@
         let sorular = [];
         let currentQuestionIndex = 0;
         let selectedAnswer = null;
+        let questionChecked = false;
         
         // İstatistikleri localStorage'dan yükle veya sıfırla
         function loadUserStats() {
@@ -865,6 +896,7 @@
             const soru = sorular[index];
             currentQuestionIndex = index;
             selectedAnswer = null;
+            questionChecked = false;
 
             // Aktif soruyu navigasyon panelinde işaretle
             updateActiveQuestion(index);
@@ -917,6 +949,10 @@
             // Açıklama kutusunu gizle
             document.getElementById('explanationBox').style.display = 'none';
             document.getElementById('nextBtn').style.display = 'none';
+            const checkBtn = document.getElementById('checkBtn');
+            checkBtn.style.display = 'block';
+            checkBtn.disabled = true;
+            checkBtn.classList.remove('enabled');
             
             // Şıkları sıfırla
             document.querySelectorAll('.option').forEach(opt => {
@@ -925,16 +961,24 @@
         }
 
         function selectOption(sik) {
-            const explanationBox = document.getElementById('explanationBox');
-            if (explanationBox.style.display === 'block') {
-                return; // Açıklama zaten gösteriliyor
-            }
-
+            if (questionChecked) return;
             selectedAnswer = sik;
+            document.querySelectorAll('.option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.sik === sik) {
+                    opt.classList.add('selected');
+                }
+            });
+            const checkBtn = document.getElementById('checkBtn');
+            checkBtn.disabled = false;
+            checkBtn.classList.add('enabled');
+        }
+
+        function checkAnswer() {
+            if (questionChecked || !selectedAnswer) return;
+            questionChecked = true;
             const soru = sorular[currentQuestionIndex];
-            // Seçilen şığın orijinal harfini bul
-            const selectedOriginalSik = optionMapping[sik];
-            // Doğru cevabı kontrol et (orijinal şık harfi ile)
+            const selectedOriginalSik = optionMapping[selectedAnswer];
             const isCorrect = selectedOriginalSik === soru.dogru_sik;
 
             // İstatistikleri güncelle
@@ -944,48 +988,36 @@
             } else {
                 stats.incorrect++;
             }
-            
-            // İstatistikleri kaydet
             saveUserStats(stats);
 
             // Şıkları renklendir
             document.querySelectorAll('.option').forEach(opt => {
-                opt.classList.remove('selected');
                 opt.classList.add('disabled');
-                
-                const originalSikHarf = opt.dataset.originalSik; // Orijinal şık harfi
-                const displaySikHarf = opt.dataset.sik; // Görüntülenen şık harfi (A, B, C, D)
-                
-                // Doğru cevabı yeşil yap
+                const originalSikHarf = opt.dataset.originalSik;
+                const displaySikHarf = opt.dataset.sik;
                 if (originalSikHarf === soru.dogru_sik) {
                     opt.classList.add('correct');
-                } 
-                // Seçilen yanlış cevabı kırmızı yap
-                else if (displaySikHarf === sik && !isCorrect) {
+                } else if (displaySikHarf === selectedAnswer && !isCorrect) {
                     opt.classList.add('incorrect');
                 }
             });
 
             // Açıklama kutusunu oluştur ve göster
+            const explanationBox = document.getElementById('explanationBox');
             let explanationHTML = '<div class="explanation-title">Açıklama</div>';
             
-            // Baslik
             if (soru.baslik) {
                 explanationHTML += '<div class="explanation-section">';
                 explanationHTML += '<div class="explanation-section-label">Başlık:</div>';
                 explanationHTML += '<div class="explanation-section-content">' + soru.baslik + '</div>';
                 explanationHTML += '</div>';
             }
-            
-            // Aciklama_Metin
             if (soru.aciklama_metin) {
                 explanationHTML += '<div class="explanation-section">';
                 explanationHTML += '<div class="explanation-section-label">Açıklama Metni:</div>';
                 explanationHTML += '<div class="explanation-section-content">' + soru.aciklama_metin + '</div>';
                 explanationHTML += '</div>';
             }
-            
-            // Yorum
             if (soru.yorum) {
                 explanationHTML += '<div class="explanation-section">';
                 explanationHTML += '<div class="explanation-section-label">Yorum:</div>';
@@ -996,13 +1028,11 @@
             explanationBox.innerHTML = explanationHTML;
             explanationBox.style.display = 'block';
 
-            // İstatistikleri güncelle ve kaydet
-            saveUserStats(stats);
             document.getElementById('correctCount').textContent = stats.correct;
             document.getElementById('incorrectCount').textContent = stats.incorrect;
             document.getElementById('totalAnswered').textContent = stats.total;
 
-            // Sonraki soru butonunu göster
+            document.getElementById('checkBtn').style.display = 'none';
             document.getElementById('nextBtn').style.display = 'block';
         }
 
@@ -1012,6 +1042,7 @@
 
         // Event listeners
         document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+        document.getElementById('checkBtn').addEventListener('click', checkAnswer);
 
         // Sayfa yüklendiğinde istatistikleri göster
         function updateStatsDisplay() {
