@@ -193,74 +193,61 @@
             window.location.href = 'login.html';
         }
 
-        // İstatistikleri yükle
-        function loadStatistics() {
-            // Tüm localStorage'dan kullanıcı istatistiklerini topla
-            const allStats = {};
-            let totalQuestions = 0;
-            let totalCorrect = 0;
-            let totalIncorrect = 0;
-
-            // localStorage'daki tüm key'leri kontrol et
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                
-                // Kullanıcı istatistikleri "stats_" ile başlar
-                if (key && key.startsWith('stats_')) {
-                    const username = key.replace('stats_', '');
-                    try {
-                        const stats = JSON.parse(localStorage.getItem(key));
-                        allStats[username] = stats;
-                        totalQuestions += stats.total || 0;
-                        totalCorrect += stats.correct || 0;
-                        totalIncorrect += stats.incorrect || 0;
-                    } catch (e) {
-                        console.error('İstatistik parse hatası:', e);
-                    }
-                }
-            }
-
-            // Özet istatistikleri güncelle
-            document.getElementById('totalUsers').textContent = Object.keys(allStats).length;
-            document.getElementById('totalQuestions').textContent = totalQuestions;
-            document.getElementById('totalCorrect').textContent = totalCorrect;
-            document.getElementById('totalIncorrect').textContent = totalIncorrect;
-
-            // Tabloyu doldur
-            const tableBody = document.getElementById('statsTableBody');
-            tableBody.innerHTML = '';
-
-            if (Object.keys(allStats).length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="no-data">Henüz veri yok</td></tr>';
-                return;
-            }
-
-            // İsimlere göre sırala
-            const sortedUsers = Object.keys(allStats).sort();
-
-            sortedUsers.forEach(username => {
-                const stats = allStats[username];
-                const total = stats.total || 0;
-                const correct = stats.correct || 0;
-                const incorrect = stats.incorrect || 0;
-                const successRate = total > 0 ? ((correct / total) * 100).toFixed(1) : '0.0';
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${username}</td>
-                    <td>${total}</td>
-                    <td style="color: #2d8659; font-weight: bold;">${correct}</td>
-                    <td style="color: #d32f2f; font-weight: bold;">${incorrect}</td>
-                    <td>${successRate}%</td>
-                `;
-                tableBody.appendChild(row);
-            });
+        async function fetchAllStats() {
+            const res = await fetch('/api/stats');
+            if (!res.ok) throw new Error('API yanıtı başarısız');
+            return res.json();
         }
 
-        // Sayfa yüklendiğinde istatistikleri yükle
-        loadStatistics();
+        async function loadStatistics() {
+            const tableBody = document.getElementById('statsTableBody');
+            tableBody.innerHTML = '<tr><td colspan="5" class="no-data">Yükleniyor...</td></tr>';
+            try {
+                const data = await fetchAllStats();
+                if (!Array.isArray(data) || data.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="no-data">Henüz veri yok</td></tr>';
+                    document.getElementById('totalUsers').textContent = 0;
+                    document.getElementById('totalQuestions').textContent = 0;
+                    document.getElementById('totalCorrect').textContent = 0;
+                    document.getElementById('totalIncorrect').textContent = 0;
+                    return;
+                }
 
-        // Her 5 saniyede bir güncelle (eğer başka sekmede veri güncellenirse)
+                // Özetler
+                const totalUsers = data.length;
+                const totalQuestions = data.reduce((sum, r) => sum + (r.total || 0), 0);
+                const totalCorrect = data.reduce((sum, r) => sum + (r.correct || 0), 0);
+                const totalIncorrect = data.reduce((sum, r) => sum + (r.incorrect || 0), 0);
+
+                document.getElementById('totalUsers').textContent = totalUsers;
+                document.getElementById('totalQuestions').textContent = totalQuestions;
+                document.getElementById('totalCorrect').textContent = totalCorrect;
+                document.getElementById('totalIncorrect').textContent = totalIncorrect;
+
+                // Tablo
+                tableBody.innerHTML = '';
+                data.forEach(row => {
+                    const total = row.total || 0;
+                    const correct = row.correct || 0;
+                    const incorrect = row.incorrect || 0;
+                    const successRate = total > 0 ? ((correct / total) * 100).toFixed(1) : '0.0';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.user_name}</td>
+                        <td>${total}</td>
+                        <td style="color: #2d8659; font-weight: bold;">${correct}</td>
+                        <td style="color: #d32f2f; font-weight: bold;">${incorrect}</td>
+                        <td>${successRate}%</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('İstatistik yükleme hatası', err);
+                tableBody.innerHTML = '<tr><td colspan="5" class="no-data">İstatistik alınamadı</td></tr>';
+            }
+        }
+
+        loadStatistics();
         setInterval(loadStatistics, 5000);
     </script>
 </body>

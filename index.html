@@ -739,27 +739,42 @@
         let currentQuestionIndex = 0;
         let selectedAnswer = null;
         let questionChecked = false;
+        let stats = { correct: 0, incorrect: 0, total: 0 };
         
-        // İstatistikleri localStorage'dan yükle veya sıfırla
-        function loadUserStats() {
-            const statsKey = `stats_${currentUser}`;
-            const savedStats = localStorage.getItem(statsKey);
-            if (savedStats) {
-                return JSON.parse(savedStats);
+        // İstatistikleri API'den yükle / kaydet
+        async function loadUserStats() {
+            try {
+                const res = await fetch(`/api/stats/${encodeURIComponent(currentUser)}`);
+                if (!res.ok) throw new Error('Stats fetch failed');
+                const data = await res.json();
+                return {
+                    correct: data.correct || 0,
+                    incorrect: data.incorrect || 0,
+                    total: data.total || 0
+                };
+            } catch (e) {
+                console.error('İstatistik yüklenemedi, 0 ile devam ediliyor', e);
+                return { correct: 0, incorrect: 0, total: 0 };
             }
-            return {
-                correct: 0,
-                incorrect: 0,
-                total: 0
-            };
         }
         
-        function saveUserStats(stats) {
-            const statsKey = `stats_${currentUser}`;
-            localStorage.setItem(statsKey, JSON.stringify(stats));
+        async function saveUserStats(statsToSave) {
+            try {
+                await fetch('/api/stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user: currentUser,
+                        correct: statsToSave.correct || 0,
+                        incorrect: statsToSave.incorrect || 0,
+                        total: statsToSave.total || 0
+                    })
+                });
+            } catch (e) {
+                console.error('İstatistik kaydedilemedi', e);
+            }
         }
         
-        let stats = loadUserStats();
         let currentShuffledOptions = []; // Karıştırılmış şıklar
         let optionMapping = {}; // Yeni sıradaki şık -> orijinal şık harfi eşleşmesi
         let questionsByCategory = {}; // Başlıklara göre gruplandırılmış sorular
@@ -974,7 +989,7 @@
             checkBtn.classList.add('enabled');
         }
 
-        function checkAnswer() {
+        async function checkAnswer() {
             if (questionChecked || !selectedAnswer) return;
             questionChecked = true;
             const soru = sorular[currentQuestionIndex];
@@ -988,7 +1003,7 @@
             } else {
                 stats.incorrect++;
             }
-            saveUserStats(stats);
+            await saveUserStats(stats);
 
             // Şıkları renklendir
             document.querySelectorAll('.option').forEach(opt => {
@@ -1051,9 +1066,13 @@
             document.getElementById('totalAnswered').textContent = stats.total;
         }
         
-        // Sayfa yüklendiğinde istatistikleri göster ve soruları yükle
-        updateStatsDisplay();
-        loadQuestions();
+        // Başlangıç
+        async function initApp() {
+            stats = await loadUserStats();
+            updateStatsDisplay();
+            loadQuestions();
+        }
+        initApp();
     </script>
 </body>
 </html>
