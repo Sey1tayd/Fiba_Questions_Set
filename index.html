@@ -763,9 +763,35 @@
         let currentQuestionIndex = 0;
         let selectedAnswer = null;
         let questionChecked = false;
-        let stats = { correct: 0, incorrect: 0, total: 0 };
+        let stats = { correct: 0, incorrect: 0, total: 0, tests_completed: 0 }; // Veritabanı istatistikleri (tüm zamanlar)
+        let currentTestStats = { correct: 0, incorrect: 0, total: 0 }; // Aktif test istatistikleri (sadece bu test)
         
-        // İstatistikleri API'den yükle / kaydet
+        // Aktif test istatistiklerini localStorage'dan yükle
+        function getCurrentTestStatsKey() {
+            return `currentTestStats_${currentUser}`;
+        }
+
+        function loadCurrentTestStats() {
+            const key = getCurrentTestStatsKey();
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return { correct: 0, incorrect: 0, total: 0 };
+        }
+
+        function saveCurrentTestStats() {
+            const key = getCurrentTestStatsKey();
+            localStorage.setItem(key, JSON.stringify(currentTestStats));
+        }
+
+        function clearCurrentTestStats() {
+            const key = getCurrentTestStatsKey();
+            localStorage.removeItem(key);
+            currentTestStats = { correct: 0, incorrect: 0, total: 0 };
+        }
+        
+        // İstatistikleri API'den yükle / kaydet (veritabanı istatistikleri)
         async function loadUserStats() {
             try {
                 const res = await fetch(`/api/stats/${encodeURIComponent(currentUser)}`);
@@ -1090,8 +1116,9 @@
             document.getElementById('newTestBtn').addEventListener('click', function() {
                 clearTestResult();
                 clearAnswers();
-                // İstatistikleri sıfırla (sadece bu test için)
-                stats = { correct: 0, incorrect: 0, total: 0, tests_completed: stats.tests_completed };
+                clearCheckedQuestions();
+                // Aktif test istatistiklerini sıfırla
+                clearCurrentTestStats();
                 updateStatsDisplay();
                 showQuestion(0);
             });
@@ -1102,7 +1129,9 @@
                 // Önce test sonucu var mı kontrol et
                 const testResult = loadTestResult();
                 if (testResult) {
-                    // Test sonucu varsa göster
+                    // Test sonucu varsa göster ve aktif test istatistiklerini temizle
+                    clearCurrentTestStats();
+                    updateStatsDisplay();
                     showTestResult(testResult);
                     return;
                 }
@@ -1298,25 +1327,22 @@
             const selectedOriginalSik = optionMapping[selectedAnswer];
             const isCorrect = selectedOriginalSik === soru.dogru_sik;
 
-            // İstatistikleri güncelle
-            stats.total++;
+            // Aktif test istatistiklerini güncelle
+            currentTestStats.total++;
             if (isCorrect) {
-                stats.correct++;
+                currentTestStats.correct++;
             } else {
-                stats.incorrect++;
+                currentTestStats.incorrect++;
             }
 
-            // Ekrandaki istatistikleri anında güncelle
-            document.getElementById('correctCount').textContent = stats.correct;
-            document.getElementById('incorrectCount').textContent = stats.incorrect;
-            document.getElementById('totalAnswered').textContent = stats.total;
+            // Aktif test istatistiklerini kaydet
+            saveCurrentTestStats();
 
-            // Veritabanına anında kaydet (test bitmesini beklemeden)
+            // Ekrandaki istatistikleri anında güncelle
+            updateStatsDisplay();
+
+            // Soru bazında deneme kaydet (admin detayları için - veritabanına)
             try {
-                // Genel istatistikleri kaydet
-                await saveUserStats(stats);
-                
-                // Soru bazında deneme kaydet (admin detayları için)
                 await logAttempt({
                     user: currentUser,
                     questionIndex: currentQuestionIndex + 1, // 1-based (admin'de daha anlaşılır)
@@ -1325,8 +1351,8 @@
                     isCorrect
                 });
             } catch (error) {
-                console.error('İstatistik kaydetme hatası:', error);
-                // Hata olsa bile kullanıcıya göster, ama devam et
+                console.error('Attempt kaydetme hatası:', error);
+                // Hata olsa bile devam et
             }
 
             // Şıkları renklendir
@@ -1433,14 +1459,22 @@
                 unanswered: sorular.length - totalAnswered
             };
 
-            // İstatistikleri kaydet
-            stats.correct = correctCount;
-            stats.incorrect = incorrectCount;
-            stats.total = totalAnswered;
-            if (typeof stats.tests_completed !== 'number') stats.tests_completed = 0;
-            stats.tests_completed++;
+            // Aktif test istatistiklerini güncelle
+            currentTestStats.correct = correctCount;
+            currentTestStats.incorrect = incorrectCount;
+            currentTestStats.total = totalAnswered;
+
+            // Veritabanına kaydet (tüm zamanların istatistikleri)
+            // Önce mevcut istatistikleri yükle
+            const dbStats = await loadUserStats();
+            const newStats = {
+                correct: (dbStats.correct || 0) + correctCount,
+                incorrect: (dbStats.incorrect || 0) + incorrectCount,
+                total: (dbStats.total || 0) + totalAnswered,
+                tests_completed: (dbStats.tests_completed || 0) + 1
+            };
             
-            await saveUserStats(stats);
+            await saveUserStats(newStats);
             await logSessionComplete();
 
             // Sonuçları kaydet
@@ -1457,8 +1491,11 @@
                 totalQuestions: sorular.length
             });
 
-            // Cevapları temizle
+            // Cevapları, kontrol edilmiş soruları ve aktif test istatistiklerini temizle
             clearAnswers();
+            clearCheckedQuestions();
+            clearCurrentTestStats();
+            updateStatsDisplay();
         }
 
         // Event listeners
@@ -1468,14 +1505,17 @@
 
         // Sayfa yüklendiğinde istatistikleri göster
         function updateStatsDisplay() {
-            document.getElementById('correctCount').textContent = stats.correct;
-            document.getElementById('incorrectCount').textContent = stats.incorrect;
-            document.getElementById('totalAnswered').textContent = stats.total;
+            // Sadece aktif test istatistiklerini göster
+            document.getElementById('correctCount').textContent = currentTestStats.correct;
+            document.getElementById('incorrectCount').textContent = currentTestStats.incorrect;
+            document.getElementById('totalAnswered').textContent = currentTestStats.total;
         }
         
         // Başlangıç
         async function initApp() {
             stats = await loadUserStats();
+            // Aktif test istatistiklerini yükle
+            currentTestStats = loadCurrentTestStats();
             updateStatsDisplay();
             loadQuestions();
         }
