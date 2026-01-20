@@ -651,6 +651,28 @@
             min-width: 30px;
         }
 
+        .nav-question-status {
+            margin-left: auto;
+            margin-right: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .nav-question-status.correct {
+            color: #2d8659;
+        }
+
+        .nav-question-status.incorrect {
+            color: #d32f2f;
+        }
+
+        .nav-question-status.unanswered {
+            color: #CD853F;
+            opacity: 0.6;
+        }
+
         .nav-overlay {
             display: none;
             position: fixed;
@@ -932,6 +954,27 @@
             const key = getTestResultKey();
             localStorage.removeItem(key);
         }
+
+        // Son soru index'ini kaydet/yükle (yarım kalan test için)
+        function getLastQuestionIndexKey() {
+            return `lastQuestionIndex_${currentUser}`;
+        }
+
+        function saveLastQuestionIndex(index) {
+            const key = getLastQuestionIndexKey();
+            localStorage.setItem(key, index.toString());
+        }
+
+        function loadLastQuestionIndex() {
+            const key = getLastQuestionIndexKey();
+            const saved = localStorage.getItem(key);
+            return saved ? parseInt(saved, 10) : null;
+        }
+
+        function clearLastQuestionIndex() {
+            const key = getLastQuestionIndexKey();
+            localStorage.removeItem(key);
+        }
         
         let currentShuffledOptions = []; // Karıştırılmış şıklar
         let optionMapping = {}; // Yeni sıradaki şık -> orijinal şık harfi eşleşmesi
@@ -1034,9 +1077,32 @@
                     const questionItem = document.createElement('div');
                     questionItem.className = 'nav-question-item';
                     const globalIndex = categoryIndexMap[baslik][qIndex];
+                    
+                    // Soru durumunu kontrol et
+                    const checkedData = isQuestionChecked(globalIndex);
+                    const savedAnswer = loadAnswer(globalIndex);
+                    let statusIcon = '';
+                    let statusClass = '';
+                    
+                    if (checkedData && checkedData.checked) {
+                        // Soru kontrol edilmiş
+                        if (checkedData.isCorrect) {
+                            statusIcon = '✓';
+                            statusClass = 'correct';
+                        } else {
+                            statusIcon = '✗';
+                            statusClass = 'incorrect';
+                        }
+                    } else if (savedAnswer) {
+                        // Soru cevaplanmış ama kontrol edilmemiş
+                        statusIcon = '○';
+                        statusClass = 'unanswered';
+                    }
+                    
                     questionItem.innerHTML = `
                         <span class="nav-question-number">${globalIndex + 1}</span>
                         <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${soru.soru_metni.substring(0, 50)}${soru.soru_metni.length > 50 ? '...' : ''}</span>
+                        ${statusIcon ? `<span class="nav-question-status ${statusClass}">${statusIcon}</span>` : ''}
                     `;
                     questionItem.addEventListener('click', () => {
                         // Panel'i kapat (mobil için - her zaman kapat)
@@ -1140,14 +1206,44 @@
 
             // Yeni Teste Başla butonuna event listener ekle
             document.getElementById('newTestBtn').addEventListener('click', function() {
-                clearTestResult();
-                clearAnswers();
-                clearCheckedQuestions();
-                // Aktif test istatistiklerini sıfırla
-                clearCurrentTestStats();
-                updateStatsDisplay();
-                showQuestion(0);
+                startNewTest();
             });
+        }
+
+        // Yeni teste başla fonksiyonu (sayfa yenilenmeden)
+        function startNewTest() {
+            clearTestResult();
+            clearAnswers();
+            clearCheckedQuestions();
+            clearLastQuestionIndex();
+            // Aktif test istatistiklerini sıfırla
+            clearCurrentTestStats();
+            updateStatsDisplay();
+            
+            // Test sonucu ekranını kaldır ve soru görünümünü geri getir
+            if (sorular.length > 0) {
+                // questionContainer'ı orijinal haline getir
+                document.getElementById('questionContainer').innerHTML = `
+                    <div class="question-box" id="questionBox"></div>
+                    <div class="options-container" id="optionsContainer"></div>
+                    <div class="explanation-box" id="explanationBox" style="display: none;"></div>
+                    <button class="check-btn" id="checkBtn" disabled>Kontrol Et</button>
+                    <button class="next-btn" id="nextBtn" style="display: none;">Sonraki Soru</button>
+                    <button class="finish-btn" id="finishBtn" style="display: none;">Testi Bitir</button>
+                `;
+                
+                // Event listener'ları yeniden ekle
+                document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+                document.getElementById('checkBtn').addEventListener('click', checkAnswer);
+                document.getElementById('finishBtn').addEventListener('click', finishTest);
+                
+                // Navigasyon panelini güncelle
+                buildNavigationPanel();
+                showQuestion(0);
+            } else {
+                // Sorular yüklenmemişse yükle
+                loadQuestions();
+            }
         }
 
         async function loadQuestions() {
@@ -1164,7 +1260,16 @@
                 sorular = await response.json();
                 groupQuestionsByCategory();
                 buildNavigationPanel();
-                showQuestion(0);
+                
+                // Yarım kalan test var mı kontrol et
+                const lastQuestionIndex = loadLastQuestionIndex();
+                if (lastQuestionIndex !== null && lastQuestionIndex >= 0 && lastQuestionIndex < sorular.length) {
+                    // Yarım kalan test var, kaldığı yerden devam et
+                    showQuestion(lastQuestionIndex);
+                } else {
+                    // Yeni test başlat
+                    showQuestion(0);
+                }
             } catch (error) {
                 console.error('Sorular yüklenirken hata:', error);
                 document.getElementById('questionContainer').innerHTML = 
@@ -1182,6 +1287,7 @@
                 stats.tests_completed++;
                 saveUserStats(stats);
                 logSessionComplete();
+                clearLastQuestionIndex(); // Test bitti, son soru index'ini temizle
                 return;
             }
 
@@ -1189,6 +1295,9 @@
             currentQuestionIndex = index;
             selectedAnswer = null;
             questionChecked = false;
+
+            // Son soru index'ini kaydet
+            saveLastQuestionIndex(index);
 
             // Aktif soruyu navigasyon panelinde işaretle
             updateActiveQuestion(index);
@@ -1321,6 +1430,10 @@
             const checkBtn = document.getElementById('checkBtn');
             checkBtn.disabled = false;
             checkBtn.classList.add('enabled');
+            
+            // Navigasyon panelini güncelle (cevaplanmış işareti için)
+            buildNavigationPanel();
+            updateActiveQuestion(currentQuestionIndex);
         }
 
         async function checkAnswer() {
@@ -1377,6 +1490,10 @@
 
             // Soruyu kontrol edilmiş olarak işaretle
             markQuestionAsChecked(currentQuestionIndex, isCorrect, soru.dogru_sik, selectedAnswer);
+
+            // Navigasyon panelini güncelle (durum göstergelerini yenile)
+            buildNavigationPanel();
+            updateActiveQuestion(currentQuestionIndex);
 
             // İstatistikler zaten yukarıda güncellendi ve kaydedildi
             document.getElementById('checkBtn').style.display = 'none';
@@ -1477,6 +1594,7 @@
             clearAnswers();
             clearCheckedQuestions();
             clearCurrentTestStats();
+            clearLastQuestionIndex(); // Test bitti, son soru index'ini temizle
             updateStatsDisplay();
         }
 
