@@ -855,6 +855,35 @@
         function clearAnswers() {
             const key = getAnswersKey();
             localStorage.removeItem(key);
+            clearCheckedQuestions();
+        }
+
+        // Kontrol edilmiş soruları kaydet/yükle
+        function getCheckedQuestionsKey() {
+            return `checkedQuestions_${currentUser}`;
+        }
+
+        function markQuestionAsChecked(questionIndex, isCorrect, correctAnswer, selectedAnswer) {
+            const key = getCheckedQuestionsKey();
+            const checked = JSON.parse(localStorage.getItem(key) || '{}');
+            checked[questionIndex] = {
+                isCorrect,
+                correctAnswer,
+                selectedAnswer,
+                checked: true
+            };
+            localStorage.setItem(key, JSON.stringify(checked));
+        }
+
+        function isQuestionChecked(questionIndex) {
+            const key = getCheckedQuestionsKey();
+            const checked = JSON.parse(localStorage.getItem(key) || '{}');
+            return checked[questionIndex] || null;
+        }
+
+        function clearCheckedQuestions() {
+            const key = getCheckedQuestionsKey();
+            localStorage.removeItem(key);
         }
 
         // Test bitirme sonuçlarını kaydet/yükle
@@ -1156,35 +1185,93 @@
                 optionsContainer.appendChild(optionDiv);
             });
 
-            // Kaydedilmiş cevabı yükle
-            const savedAnswer = loadAnswer(index);
-            if (savedAnswer) {
-                selectedAnswer = savedAnswer;
+            // Kontrol edilmiş soru kontrolü
+            const checkedData = isQuestionChecked(index);
+            
+            if (checkedData && checkedData.checked) {
+                // Soru daha önce kontrol edilmiş, kontrol edilmiş durumda göster
+                questionChecked = true;
+                // Kaydedilmiş cevabı yükle (displayAnswer)
+                const savedAnswer = loadAnswer(index);
+                selectedAnswer = savedAnswer || checkedData.selectedAnswer;
+                
+                // Şıkları renklendir
                 document.querySelectorAll('.option').forEach(opt => {
-                    if (opt.dataset.sik === savedAnswer) {
-                        opt.classList.add('selected');
+                    opt.classList.add('disabled');
+                    const originalSikHarf = opt.dataset.originalSik;
+                    const displaySikHarf = opt.dataset.sik;
+                    
+                    if (originalSikHarf === soru.dogru_sik) {
+                        opt.classList.add('correct');
+                    } else if (displaySikHarf === selectedAnswer && !checkedData.isCorrect) {
+                        opt.classList.add('incorrect');
                     }
                 });
-                const checkBtn = document.getElementById('checkBtn');
-                checkBtn.disabled = false;
-                checkBtn.classList.add('enabled');
-            }
+                
+                // Açıklama kutusunu göster
+                const explanationBox = document.getElementById('explanationBox');
+                let explanationHTML = '<div class="explanation-title">Açıklama</div>';
+                
+                if (soru.baslik) {
+                    explanationHTML += '<div class="explanation-section">';
+                    explanationHTML += '<div class="explanation-section-label">Başlık:</div>';
+                    explanationHTML += '<div class="explanation-section-content">' + soru.baslik + '</div>';
+                    explanationHTML += '</div>';
+                }
+                if (soru.aciklama_metin) {
+                    explanationHTML += '<div class="explanation-section">';
+                    explanationHTML += '<div class="explanation-section-label">Açıklama Metni:</div>';
+                    explanationHTML += '<div class="explanation-section-content">' + soru.aciklama_metin + '</div>';
+                    explanationHTML += '</div>';
+                }
+                if (soru.yorum) {
+                    explanationHTML += '<div class="explanation-section">';
+                    explanationHTML += '<div class="explanation-section-label">Yorum:</div>';
+                    explanationHTML += '<div class="explanation-section-content">' + soru.yorum + '</div>';
+                    explanationHTML += '</div>';
+                }
+                
+                explanationBox.innerHTML = explanationHTML;
+                explanationBox.style.display = 'block';
+                
+                // Butonları gizle/göster
+                document.getElementById('checkBtn').style.display = 'none';
+                document.getElementById('nextBtn').style.display = 'block';
+                document.getElementById('finishBtn').style.display = 'block';
+            } else {
+                // Soru henüz kontrol edilmemiş
+                questionChecked = false;
+                
+                // Kaydedilmiş cevabı yükle
+                const savedAnswer = loadAnswer(index);
+                if (savedAnswer) {
+                    selectedAnswer = savedAnswer;
+                    document.querySelectorAll('.option').forEach(opt => {
+                        if (opt.dataset.sik === savedAnswer) {
+                            opt.classList.add('selected');
+                        }
+                    });
+                    const checkBtn = document.getElementById('checkBtn');
+                    checkBtn.disabled = false;
+                    checkBtn.classList.add('enabled');
+                }
 
-            // Açıklama kutusunu gizle
-            document.getElementById('explanationBox').style.display = 'none';
-            document.getElementById('nextBtn').style.display = 'none';
-            document.getElementById('finishBtn').style.display = 'none';
-            const checkBtn = document.getElementById('checkBtn');
-            checkBtn.style.display = 'block';
-            if (!savedAnswer) {
-                checkBtn.disabled = true;
-                checkBtn.classList.remove('enabled');
+                // Açıklama kutusunu gizle
+                document.getElementById('explanationBox').style.display = 'none';
+                document.getElementById('nextBtn').style.display = 'none';
+                document.getElementById('finishBtn').style.display = 'none';
+                const checkBtn = document.getElementById('checkBtn');
+                checkBtn.style.display = 'block';
+                if (!savedAnswer) {
+                    checkBtn.disabled = true;
+                    checkBtn.classList.remove('enabled');
+                }
+                
+                // Şıkları sıfırla (sadece renklendirmeyi)
+                document.querySelectorAll('.option').forEach(opt => {
+                    opt.classList.remove('correct', 'incorrect', 'disabled');
+                });
             }
-            
-            // Şıkları sıfırla (sadece renklendirmeyi)
-            document.querySelectorAll('.option').forEach(opt => {
-                opt.classList.remove('correct', 'incorrect', 'disabled');
-            });
         }
 
         function selectOption(sik) {
@@ -1279,6 +1366,9 @@
 
             explanationBox.innerHTML = explanationHTML;
             explanationBox.style.display = 'block';
+
+            // Soruyu kontrol edilmiş olarak işaretle
+            markQuestionAsChecked(currentQuestionIndex, isCorrect, soru.dogru_sik, selectedAnswer);
 
             // İstatistikler zaten yukarıda güncellendi ve kaydedildi
             document.getElementById('checkBtn').style.display = 'none';
