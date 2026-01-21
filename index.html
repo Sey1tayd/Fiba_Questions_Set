@@ -1355,8 +1355,21 @@
             document.getElementById('questionInfo').textContent = 
                 `${currentUser} - Soru ${index + 1} / ${sorular.length} - ${soru.baslik}`;
 
-            // Soru metni (Ornek_Metin) - yalın olarak
-            document.getElementById('questionBox').textContent = soru.soru_metni || 'Soru metni yok';
+            // Soru metni (Ornek_Metin) - maddeleri alt satırda göster
+            const questionText = soru.soru_metni || 'Soru metni yok';
+            // (a), (b), (c), (d) gibi maddeleri algıla ve alt satırda göster
+            const questionBox = document.getElementById('questionBox');
+            // Eğer metinde (a), (b) gibi maddeler varsa HTML formatında göster
+            if (questionText.includes('(a)') || questionText.includes('(b)') || 
+                questionText.includes('(c)') || questionText.includes('(d)')) {
+                // Maddeleri alt satırda göster
+                let formattedText = questionText;
+                // (a), (b), (c), (d) gibi maddeleri <br> ile ayır
+                formattedText = formattedText.replace(/\s*\(([a-d])\)\s*/gi, '<br>($1) ');
+                questionBox.innerHTML = formattedText;
+            } else {
+                questionBox.textContent = questionText;
+            }
 
             // Şıkları karıştır (Fisher-Yates shuffle algoritması)
             const shuffledSiklar = [...soru.siklar];
@@ -1368,9 +1381,12 @@
             // Karıştırılmış şıkları sakla
             currentShuffledOptions = shuffledSiklar;
             
-            // Yeni şık harfleri (A, B, C, D) ve orijinal şık harfleri arasında eşleşme oluştur
+            // Yeni şık harfleri (A, B, C, D, E, F...) dinamik olarak oluştur
             optionMapping = {};
-            const harfler = ['A', 'B', 'C', 'D'];
+            const harfler = [];
+            for (let i = 0; i < shuffledSiklar.length; i++) {
+                harfler.push(String.fromCharCode(65 + i)); // A=65, B=66, C=67, ...
+            }
             shuffledSiklar.forEach((sik, index) => {
                 optionMapping[harfler[index]] = sik.harf; // Yeni harf -> orijinal harf
             });
